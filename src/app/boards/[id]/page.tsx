@@ -22,6 +22,8 @@ interface Entry {
   time: string;
   location: string | null;
   photos: string[];
+  created_by_name: string;
+  user_id: string;
 }
 
 export default function BoardPage() {
@@ -89,9 +91,13 @@ export default function BoardPage() {
           content,
           created_at,
           location,
+          user_id,
           photos (
             file_path,
             display_order
+          ),
+          profiles!user_id (
+            first_name
           )
         `)
         .eq('board_id', id)
@@ -102,6 +108,8 @@ export default function BoardPage() {
       // Format entries to match the component interface
       const formattedEntries: Entry[] = (entriesData || []).map(entry => {
         const createdAt = new Date(entry.created_at);
+        const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
+
         return {
           id: entry.id,
           content: entry.content,
@@ -118,7 +126,9 @@ export default function BoardPage() {
           location: entry.location,
           photos: (entry.photos || [])
             .sort((a, b) => a.display_order - b.display_order)
-            .map(photo => photo.file_path)
+            .map(photo => photo.file_path),
+          created_by_name: profile?.first_name || 'Unknown',
+          user_id: entry.user_id,
         };
       });
 
@@ -215,8 +225,10 @@ export default function BoardPage() {
               content={entry.content}
               date={entry.date}
               time={entry.time}
-              location={entry.location}
+              location={entry.location || ''}
               photos={entry.photos}
+              createdByName={entry.created_by_name}
+              isOwnPost={entry.user_id === user?.id}
             />
           ))
         ) : (
