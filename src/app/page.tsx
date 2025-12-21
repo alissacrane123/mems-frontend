@@ -23,6 +23,8 @@ interface Entry {
   time: string;
   location: string | null;
   photos: string[];
+  created_by_name: string;
+  user_id: string;
 }
 
 export default function Home() {
@@ -109,8 +111,12 @@ export default function Home() {
           content,
           created_at,
           location,
+          user_id,
           photos (
             file_path
+          ),
+          profiles!user_id (
+            first_name
           )
         `
         )
@@ -122,6 +128,8 @@ export default function Home() {
       // Format entries
       const formattedEntries: Entry[] = (data || []).map((entry) => {
         const createdAt = new Date(entry.created_at);
+        const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
+
         return {
           id: entry.id,
           content: entry.content,
@@ -138,6 +146,8 @@ export default function Home() {
           location: entry.location,
           photos: (entry.photos || [])
             .map((photo) => photo.file_path),
+          created_by_name: profile?.first_name || 'Unknown',
+          user_id: entry.user_id,
         };
       });
 
@@ -398,6 +408,8 @@ export default function Home() {
                     time={entry.time}
                     location={entry.location || ''}
                     photos={entry.photos}
+                    createdByName={entry.created_by_name}
+                    isOwnPost={entry.user_id === user?.id}
                   />
                 ))
               : selectedBoardId && (
