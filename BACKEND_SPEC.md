@@ -1,62 +1,87 @@
 # Mems Backend API Specification
 
-## Database Schema
+> Reflects the actual Go backend implementation at `~/Desktop/mems-backend`.
 
-### 1. `profiles`
+## Tech Stack
 
-| Field        | Type           | Constraints                                         |
-| ------------ | -------------- | --------------------------------------------------- |
-| `id`         | `UUID`         | PRIMARY KEY, FK → `auth.users(id)` ON DELETE CASCADE |
-| `first_name` | `VARCHAR(100)` | nullable                                            |
-| `last_name`  | `VARCHAR(100)` | nullable                                            |
-| `created_at` | `TIMESTAMPTZ`  | DEFAULT NOW()                                       |
-| `updated_at` | `TIMESTAMPTZ`  | DEFAULT NOW()                                       |
+- **Language:** Go
+- **Router:** [chi](https://github.com/go-chi/chi) v5
+- **Database:** PostgreSQL via [pgx](https://github.com/jackc/pgx) v5 (connection pool)
+- **Auth:** JWT (HMAC-SHA256) stored in HttpOnly cookie, 7-day expiry
+- **Password hashing:** bcrypt (`golang.org/x/crypto`)
+- **File storage:** Local filesystem (`./uploads/`)
+- **CORS:** `go-chi/cors`
 
----
+## Environment Variables
 
-### 2. `boards`
-
-| Field         | Type           | Constraints                                                                  |
-| ------------- | -------------- | ---------------------------------------------------------------------------- |
-| `id`          | `UUID`         | PRIMARY KEY, DEFAULT gen_random_uuid()                                       |
-| `name`        | `VARCHAR(255)` | NOT NULL                                                                     |
-| `description` | `TEXT`         | nullable                                                                     |
-| `invite_code` | `VARCHAR(50)`  | UNIQUE, NOT NULL, DEFAULT encode(gen_random_bytes(8), 'base64url')           |
-| `created_by`  | `UUID`         | FK → `auth.users(id)` ON DELETE CASCADE                                      |
-| `created_at`  | `TIMESTAMPTZ`  | DEFAULT NOW()                                                                |
-| `updated_at`  | `TIMESTAMPTZ`  | DEFAULT NOW()                                                                |
+| Variable | Description | Example |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://localhost:5432/mems?sslmode=disable` |
+| `JWT_SECRET` | Secret key for signing JWT tokens | `your-secret-key` |
+| `UPLOADS_PATH` | Directory for photo uploads | `./uploads` |
+| `PUBLIC_URL` | Base URL for serving uploaded files | `http://localhost:8080` |
+| `FRONTEND_URL` | Frontend origin (for CORS) | `http://localhost:3000` |
 
 ---
 
-### 3. `board_members`
+## Database Schema (7 tables)
 
-| Field      | Type          | Constraints                                                     |
-| ---------- | ------------- | --------------------------------------------------------------- |
-| `id`       | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()                          |
-| `board_id` | `UUID`        | FK → `boards(id)` ON DELETE CASCADE                             |
-| `user_id`  | `UUID`        | FK → `auth.users(id)` ON DELETE CASCADE                         |
-| `role`     | `VARCHAR(20)` | NOT NULL, CHECK: `'owner'` \| `'admin'` \| `'member'`          |
-| `joined_at`| `TIMESTAMPTZ` | DEFAULT NOW()                                                   |
+### 1. `users`
+
+| Field           | Type          | Constraints                            |
+| --------------- | ------------- | -------------------------------------- |
+| `id`            | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| `email`         | `TEXT`        | UNIQUE, NOT NULL                       |
+| `password_hash` | `TEXT`        | NOT NULL                               |
+| `created_at`    | `TIMESTAMPTZ` | DEFAULT NOW()                          |
+
+### 2. `profiles`
+
+| Field        | Type           | Constraints                                    |
+| ------------ | -------------- | ---------------------------------------------- |
+| `id`         | `UUID`         | PRIMARY KEY, FK → `users(id)` ON DELETE CASCADE |
+| `first_name` | `VARCHAR(100)` | nullable                                       |
+| `last_name`  | `VARCHAR(100)` | nullable                                       |
+| `created_at` | `TIMESTAMPTZ`  | DEFAULT NOW()                                  |
+| `updated_at` | `TIMESTAMPTZ`  | DEFAULT NOW()                                  |
+
+### 3. `boards`
+
+| Field         | Type           | Constraints                                        |
+| ------------- | -------------- | -------------------------------------------------- |
+| `id`          | `UUID`         | PRIMARY KEY, DEFAULT gen_random_uuid()             |
+| `name`        | `VARCHAR(255)` | NOT NULL                                           |
+| `description` | `TEXT`         | nullable                                           |
+| `invite_code` | `VARCHAR(50)`  | UNIQUE, NOT NULL                                   |
+| `created_by`  | `UUID`         | FK → `users(id)`                                   |
+| `created_at`  | `TIMESTAMPTZ`  | DEFAULT NOW()                                      |
+| `updated_at`  | `TIMESTAMPTZ`  | DEFAULT NOW()                                      |
+
+### 4. `board_members`
+
+| Field      | Type          | Constraints                                                |
+| ---------- | ------------- | ---------------------------------------------------------- |
+| `id`       | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()                     |
+| `board_id` | `UUID`        | FK → `boards(id)` ON DELETE CASCADE                        |
+| `user_id`  | `UUID`        | NOT NULL                                                   |
+| `role`     | `VARCHAR(20)` | NOT NULL, CHECK: `'owner'` \| `'admin'` \| `'member'`     |
+| `joined_at`| `TIMESTAMPTZ` | DEFAULT NOW()                                              |
 
 > UNIQUE constraint on `(board_id, user_id)`
 
----
+### 5. `entries`
 
-### 4. `entries`
+| Field        | Type          | Constraints                                         |
+| ------------ | ------------- | --------------------------------------------------- |
+| `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()              |
+| `user_id`    | `UUID`        | FK → `profiles(id)` ON DELETE CASCADE               |
+| `board_id`   | `UUID`        | FK → `boards(id)` ON DELETE CASCADE                 |
+| `content`    | `TEXT`        | NOT NULL                                            |
+| `location`   | `TEXT`        | nullable                                            |
+| `created_at` | `TIMESTAMPTZ` | DEFAULT NOW()                                       |
+| `updated_at` | `TIMESTAMPTZ` | DEFAULT NOW()                                       |
 
-| Field        | Type          | Constraints                                          |
-| ------------ | ------------- | ---------------------------------------------------- |
-| `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()               |
-| `user_id`    | `UUID`        | NOT NULL, FK → `profiles(id)` ON DELETE CASCADE      |
-| `board_id`   | `UUID`        | NOT NULL, FK → `boards(id)` ON DELETE CASCADE        |
-| `content`    | `TEXT`        | NOT NULL                                             |
-| `location`   | `TEXT`        | nullable                                             |
-| `created_at` | `TIMESTAMPTZ` | DEFAULT NOW()                                        |
-| `updated_at` | `TIMESTAMPTZ` | DEFAULT NOW()                                        |
-
----
-
-### 5. `photos`
+### 6. `photos`
 
 | Field           | Type          | Constraints                                    |
 | --------------- | ------------- | ---------------------------------------------- |
@@ -66,17 +91,15 @@
 | `display_order` | `INTEGER`     | DEFAULT 0                                      |
 | `created_at`    | `TIMESTAMPTZ` | DEFAULT NOW()                                  |
 
----
-
-### 6. `notifications`
+### 7. `notifications`
 
 | Field        | Type          | Constraints                                                                                          |
 | ------------ | ------------- | ---------------------------------------------------------------------------------------------------- |
 | `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()                                                               |
-| `user_id`    | `UUID`        | NOT NULL, FK → `auth.users(id)` ON DELETE CASCADE                                                    |
+| `user_id`    | `UUID`        | NOT NULL                                                                                             |
 | `type`       | `VARCHAR(50)` | NOT NULL, CHECK: `'board_invitation'` \| `'new_memory'` \| `'user_joined'` \| `'comment'` \| `'mention'` |
 | `is_read`    | `BOOLEAN`     | NOT NULL, DEFAULT FALSE                                                                              |
-| `data`       | `JSONB`       | NOT NULL, validated by type-specific CHECK constraints (see below)                                   |
+| `data`       | `JSONB`       | NOT NULL                                                                                             |
 | `created_at` | `TIMESTAMPTZ` | DEFAULT NOW()                                                                                        |
 
 #### Required `data` JSONB keys by notification type
@@ -86,49 +109,87 @@
 | `board_invitation` | `board_id`, `board_name`, `invited_by_id`, `invited_by_email`    |
 | `new_memory`       | `board_id`, `board_name`, `entry_id`, `created_by_id`, `created_by_email` |
 | `user_joined`      | `board_id`, `board_name`, `user_id`, `user_email`                |
-| `comment`          | no CHECK constraint defined                                      |
-| `mention`          | no CHECK constraint defined                                      |
+| `comment`          | no constraint defined                                            |
+| `mention`          | no constraint defined                                            |
 
 ---
 
-### Storage Bucket: `memory-photos`
+## File Storage
 
-- **Type:** Public bucket
-- **File path pattern:** `{user_id}/{entry_id}/{timestamp}_{index}.{ext}`
+- **Type:** Local filesystem
+- **Base path:** `UPLOADS_PATH` env var (default: `./uploads`)
+- **File path pattern:** `{user_id}/{entry_id}/{timestamp}{ext}`
 - **Max file size:** 10 MB
-- **Max files per entry:** 10
+- **Served at:** `GET /uploads/*` (static file server)
+- **Public URL format:** `{PUBLIC_URL}/uploads/{file_path}`
+
+---
+
+## Authentication
+
+- JWT token signed with HMAC-SHA256 using `JWT_SECRET`
+- Token claims: `user_id`, `email`, standard JWT fields
+- Token expiry: 7 days
+- Token stored in an HttpOnly cookie named `token`:
+  - `HttpOnly: true`
+  - `Secure: false` (set to `true` in production)
+  - `SameSite: Lax`
+  - `MaxAge: 7 days`
+  - `Path: /`
+- Frontend sends credentials automatically via `credentials: "include"` on fetch calls
+- Auth middleware reads the `token` cookie, validates it, and injects `user_id` / `email` into the request context
+
+---
+
+## Middleware
+
+| Middleware | Scope | Description |
+|---|---|---|
+| CORS | Global | Allows `FRONTEND_URL` origin, credentials, common methods/headers |
+| RequireAuth | Protected routes | Validates JWT cookie, rejects with 401 if missing/invalid |
 
 ---
 
 ## API Endpoints
 
+### Health (1 endpoint)
+
+#### `GET /api/health`
+
+Health check. **Public.**
+
+- **Response:**
+  ```json
+  { "status": "ok" }
+  ```
+
+---
+
 ### Auth (4 endpoints)
 
 #### `POST /api/auth/signup`
 
-Register a new user. Must also create a `profiles` row.
+Register a new user. Creates rows in both `users` and `profiles`. Sets auth cookie. **Public.**
 
 - **Request body:**
   ```json
   {
     "email": "string",
     "password": "string",
-    "first_name": "string (optional)",
-    "last_name": "string (optional)"
+    "first_name": "string",
+    "last_name": "string"
   }
   ```
-- **Response:**
+- **Response:** Sets HttpOnly `token` cookie.
   ```json
   {
-    "user": { "id": "uuid", "email": "string" },
-    "session": { ... },
-    "token": "string"
+    "user": { "id": "uuid", "email": "string" }
   }
   ```
 
 #### `POST /api/auth/signin`
 
-Sign in with email and password.
+Sign in with email and password. Sets auth cookie. **Public.**
 
 - **Request body:**
   ```json
@@ -137,35 +198,31 @@ Sign in with email and password.
     "password": "string"
   }
   ```
-- **Response:**
+- **Response:** Sets HttpOnly `token` cookie.
   ```json
   {
-    "user": { "id": "uuid", "email": "string" },
-    "session": { ... },
-    "token": "string"
+    "user": { "id": "uuid", "email": "string" }
   }
   ```
 
 #### `POST /api/auth/signout`
 
-Sign out and invalidate the session.
+Sign out. Clears auth cookie. **Protected.**
 
-- **Request:** Auth header required
-- **Response:**
+- **Response:** Clears `token` cookie.
   ```json
   { "success": true }
   ```
 
 #### `GET /api/auth/session`
 
-Get the current authenticated user and session info.
+Get current session info from cookie. **Protected.**
 
-- **Request:** Auth header required
 - **Response:**
   ```json
   {
     "user": { "id": "uuid", "email": "string" },
-    "session": { ... }
+    "expires_at": "timestamp"
   }
   ```
 
@@ -173,31 +230,30 @@ Get the current authenticated user and session info.
 
 ### Users (2 endpoints)
 
+#### `GET /api/users/me`
+
+Get the current user's profile. **Protected.**
+
+- **Response:**
+  ```json
+  { "id": "uuid", "email": "string", "first_name": "string", "last_name": "string" }
+  ```
+
 #### `POST /api/users/lookup-by-email`
 
-Look up a user ID by their email address.
+Find a user ID by email address. **Protected.**
 
 - **Request body:**
   ```json
   { "email": "string" }
   ```
-- **Response:**
+- **Response (found):**
   ```json
   { "success": true, "exists": true, "userId": "uuid" }
   ```
-  or
+- **Response (not found):**
   ```json
   { "success": true, "exists": false }
-  ```
-
-#### `GET /api/users/me`
-
-Get the current user's profile.
-
-- **Request:** Auth header required
-- **Response:**
-  ```json
-  { "id": "uuid", "email": "string", "first_name": "string", "last_name": "string" }
   ```
 
 ---
@@ -206,9 +262,8 @@ Get the current user's profile.
 
 #### `GET /api/boards`
 
-List all boards the authenticated user is a member of.
+List all boards the authenticated user is a member of. **Protected.**
 
-- **Request:** Auth header required
 - **Response:**
   ```json
   [
@@ -225,7 +280,7 @@ List all boards the authenticated user is a member of.
 
 #### `POST /api/boards`
 
-Create a new board. Must also insert a `board_members` row with `role: 'owner'` for the creator.
+Create a new board. Auto-generates invite code and adds creator as owner in `board_members`. **Protected.**
 
 - **Request body:**
   ```json
@@ -245,9 +300,9 @@ Create a new board. Must also insert a `board_members` row with `role: 'owner'` 
   }
   ```
 
-#### `GET /api/boards/:id`
+#### `GET /api/boards/{id}`
 
-Get a specific board. User must be a member.
+Get a specific board. User must be a member. **Protected.**
 
 - **Path params:** `id` (UUID)
 - **Response:**
@@ -262,9 +317,9 @@ Get a specific board. User must be a member.
   }
   ```
 
-#### `GET /api/boards/invite/:code`
+#### `GET /api/boards/invite/{code}`
 
-Look up a board by its invite code. Returns public info (no auth required to view, but auth required to join).
+Look up a board by its invite code. **Public.**
 
 - **Path params:** `code` (string)
 - **Response:**
@@ -281,9 +336,9 @@ Look up a board by its invite code. Returns public info (no auth required to vie
 
 ### Board Members (4 endpoints)
 
-#### `GET /api/boards/:id/members`
+#### `GET /api/boards/{id}/members`
 
-List all members of a board.
+List all members of a board. **Protected.**
 
 - **Path params:** `id` (board UUID)
 - **Response:**
@@ -293,9 +348,9 @@ List all members of a board.
   ]
   ```
 
-#### `GET /api/boards/:id/members/count`
+#### `GET /api/boards/{id}/members/count`
 
-Get the member count for a board.
+Get the member count for a board. **Protected.**
 
 - **Path params:** `id` (board UUID)
 - **Response:**
@@ -303,9 +358,9 @@ Get the member count for a board.
   { "count": 3 }
   ```
 
-#### `POST /api/boards/:id/members`
+#### `POST /api/boards/{id}/members`
 
-Join a board (used when accepting invites or joining via invite code).
+Add a member to a board. **Protected.**
 
 - **Path params:** `id` (board UUID)
 - **Request body:**
@@ -314,12 +369,12 @@ Join a board (used when accepting invites or joining via invite code).
   ```
 - **Response:**
   ```json
-  { "success": true }
+  { "id": "uuid", "user_id": "uuid", "role": "string", "joined_at": "timestamp" }
   ```
 
-#### `GET /api/boards/:id/members/check`
+#### `GET /api/boards/{id}/members/check`
 
-Check if a user is already a member of a board.
+Check if a user is already a member of a board. **Protected.**
 
 - **Path params:** `id` (board UUID)
 - **Query params:** `user_id` (UUID)
@@ -332,9 +387,9 @@ Check if a user is already a member of a board.
 
 ### Entries (2 endpoints)
 
-#### `GET /api/boards/:boardId/entries`
+#### `GET /api/boards/{boardId}/entries`
 
-Get all entries for a board, including photos and author name. Ordered by `created_at DESC`. User must be a board member.
+Get all entries for a board, including photos and author name. Ordered by `created_at DESC`. **Protected.**
 
 - **Path params:** `boardId` (UUID)
 - **Response:**
@@ -347,14 +402,14 @@ Get all entries for a board, including photos and author name. Ordered by `creat
       "location": "string | null",
       "user_id": "uuid",
       "created_by_name": "string",
-      "photos": ["https://...public_url1", "https://...public_url2"]
+      "photos": ["http://localhost:8080/uploads/...", "..."]
     }
   ]
   ```
 
-#### `POST /api/boards/:boardId/entries`
+#### `POST /api/boards/{boardId}/entries`
 
-Create a new memory entry. User must be a board member.
+Create a new memory entry. **Protected.**
 
 - **Path params:** `boardId` (UUID)
 - **Request body:**
@@ -378,14 +433,16 @@ Create a new memory entry. User must be a board member.
 
 ---
 
-### Photos (2 endpoints)
+### Photos (2 endpoints + static serving)
 
-#### `POST /api/entries/:entryId/photos`
+#### `POST /api/entries/{entryId}/photos`
 
-Upload a photo file and create a `photos` record. Stores to object storage at `{user_id}/{entry_id}/{timestamp}_{index}.{ext}`.
+Upload a photo file and create a `photos` record. **Protected.**
 
 - **Path params:** `entryId` (UUID)
-- **Request:** `multipart/form-data` with `file` and `display_order` fields
+- **Request:** `multipart/form-data` with `file` field and optional `display_order` field
+- **Max file size:** 10 MB
+- **Storage path:** `{UPLOADS_PATH}/{user_id}/{entry_id}/{timestamp}{ext}`
 - **Response:**
   ```json
   {
@@ -396,15 +453,19 @@ Upload a photo file and create a `photos` record. Stores to object storage at `{
   }
   ```
 
-#### `GET /api/photos/:filePath`
+#### `GET /api/photos`
 
-Get the public URL for a stored photo.
+Get the public URL for a stored photo. **Protected.**
 
-- **Path/query params:** `filePath` (string)
+- **Query params:** `filePath` (string)
 - **Response:**
   ```json
   { "public_url": "string" }
   ```
+
+#### `GET /uploads/*`
+
+Static file server for uploaded photos. **Public.** Serves files from the `UPLOADS_PATH` directory.
 
 ---
 
@@ -412,9 +473,8 @@ Get the public URL for a stored photo.
 
 #### `GET /api/notifications`
 
-Get the current user's notifications (limit 50, newest first).
+Get the current user's notifications (limit 50, newest first). **Protected.**
 
-- **Request:** Auth header required
 - **Response:**
   ```json
   [
@@ -430,7 +490,7 @@ Get the current user's notifications (limit 50, newest first).
 
 #### `POST /api/notifications`
 
-Create a notification for a user (e.g., board invitation).
+Create a notification for a user. **Protected.**
 
 - **Request body:**
   ```json
@@ -450,9 +510,9 @@ Create a notification for a user (e.g., board invitation).
   { "id": "uuid", "type": "string", "created_at": "timestamp" }
   ```
 
-#### `PATCH /api/notifications/:id/read`
+#### `PATCH /api/notifications/{id}/read`
 
-Mark a single notification as read.
+Mark a single notification as read. **Protected.**
 
 - **Path params:** `id` (UUID)
 - **Response:**
@@ -462,17 +522,16 @@ Mark a single notification as read.
 
 #### `PATCH /api/notifications/read-all`
 
-Mark all of the current user's unread notifications as read.
+Mark all of the current user's unread notifications as read. **Protected.**
 
-- **Request:** Auth header required
 - **Response:**
   ```json
   { "success": true }
   ```
 
-#### `POST /api/notifications/:id/accept`
+#### `POST /api/notifications/{id}/accept`
 
-Accept a board invitation. Marks the notification as read and adds the user to the board as a member.
+Accept a board invitation. Marks notification as read and adds user to board as member. **Protected.**
 
 - **Path params:** `id` (notification UUID)
 - **Request body:**
@@ -484,9 +543,9 @@ Accept a board invitation. Marks the notification as read and adds the user to t
   { "success": true }
   ```
 
-#### `POST /api/notifications/:id/decline`
+#### `POST /api/notifications/{id}/decline`
 
-Decline a board invitation. Marks the notification as read.
+Decline a board invitation. Marks notification as read. **Protected.**
 
 - **Path params:** `id` (notification UUID)
 - **Response:**
@@ -496,7 +555,7 @@ Decline a board invitation. Marks the notification as read.
 
 #### `GET /api/notifications/check-invite`
 
-Check if a pending (unread) board invitation already exists for a user.
+Check if a pending (unread) board invitation already exists for a user. **Protected.**
 
 - **Query params:** `user_id` (UUID), `board_id` (UUID)
 - **Response:**
@@ -508,60 +567,70 @@ Check if a pending (unread) board invitation already exists for a user.
 
 ## Authorization Summary
 
-All endpoints except `POST /api/auth/signup`, `POST /api/auth/signin`, and `GET /api/boards/invite/:code` require authentication via a Bearer token in the `Authorization` header.
+Public endpoints (no auth required):
+- `GET /api/health`
+- `POST /api/auth/signup`
+- `POST /api/auth/signin`
+- `GET /api/boards/invite/{code}`
+- `GET /uploads/*`
+
+All other endpoints require a valid JWT in the `token` HttpOnly cookie.
 
 | Resource       | Rule                                                                 |
 | -------------- | -------------------------------------------------------------------- |
 | Boards         | Users can only access boards they are a member of                    |
 | Entries        | Only board members can read/write entries for that board             |
-| Photos         | Only board members can view; users can only upload to their own path |
+| Photos         | Only board members can view; users upload to their own path          |
 | Notifications  | Users can only read/update their own; any authed user can create     |
 | Profiles       | Readable by all authenticated users; writable only by the owner      |
 | Board Members  | Viewable by fellow board members; self-join via invite               |
 
 ---
 
-## Server-Side Logic (replaces Supabase triggers/functions)
+## Server-Side Logic
 
-1. **On signup:** Insert a `profiles` row with `first_name` and `last_name` (falls back to email prefix for `first_name`).
-2. **On board creation:** Insert a `board_members` row with `role: 'owner'` for the creator.
-3. **On invite accept:** Check existing membership, then insert `board_members` with `role: 'member'`.
-4. **Invite code generation:** Generate a URL-safe random string (e.g., `base64url(random 8 bytes)`) when creating a board.
+1. **On signup:** Insert a `users` row (with bcrypt-hashed password) and a `profiles` row with `first_name` and `last_name`.
+2. **On board creation:** Generate a random invite code, insert the board, then insert a `board_members` row with `role: 'owner'` for the creator.
+3. **On invite accept:** Check existing membership, then insert `board_members` with `role: 'member'`, and mark the notification as read.
+4. **Photo upload:** Save file to local filesystem at `{user_id}/{entry_id}/{timestamp}{ext}`, insert `photos` record, return public URL.
 
 ---
 
-## Endpoint Summary (25 total)
+## Endpoint Summary (27 total)
 
 ```
-POST   /api/auth/signup
-POST   /api/auth/signin
-POST   /api/auth/signout
-GET    /api/auth/session
+GET    /api/health                            (public)
 
-POST   /api/users/lookup-by-email
-GET    /api/users/me
+POST   /api/auth/signup                       (public)
+POST   /api/auth/signin                       (public)
+POST   /api/auth/signout                      (protected)
+GET    /api/auth/session                      (protected)
 
-GET    /api/boards
-POST   /api/boards
-GET    /api/boards/:id
-GET    /api/boards/invite/:code
+GET    /api/users/me                          (protected)
+POST   /api/users/lookup-by-email             (protected)
 
-GET    /api/boards/:id/members
-GET    /api/boards/:id/members/count
-POST   /api/boards/:id/members
-GET    /api/boards/:id/members/check
+GET    /api/boards                            (protected)
+POST   /api/boards                            (protected)
+GET    /api/boards/{id}                       (protected)
+GET    /api/boards/invite/{code}              (public)
 
-GET    /api/boards/:boardId/entries
-POST   /api/boards/:boardId/entries
+GET    /api/boards/{id}/members               (protected)
+GET    /api/boards/{id}/members/count         (protected)
+POST   /api/boards/{id}/members               (protected)
+GET    /api/boards/{id}/members/check         (protected)
 
-POST   /api/entries/:entryId/photos
-GET    /api/photos/:filePath
+GET    /api/boards/{boardId}/entries           (protected)
+POST   /api/boards/{boardId}/entries           (protected)
 
-GET    /api/notifications
-POST   /api/notifications
-PATCH  /api/notifications/:id/read
-PATCH  /api/notifications/read-all
-POST   /api/notifications/:id/accept
-POST   /api/notifications/:id/decline
-GET    /api/notifications/check-invite
+POST   /api/entries/{entryId}/photos           (protected)
+GET    /api/photos                             (protected)
+GET    /uploads/*                              (public, static)
+
+GET    /api/notifications                      (protected)
+POST   /api/notifications                      (protected)
+PATCH  /api/notifications/{id}/read            (protected)
+PATCH  /api/notifications/read-all             (protected)
+POST   /api/notifications/{id}/accept          (protected)
+POST   /api/notifications/{id}/decline         (protected)
+GET    /api/notifications/check-invite         (protected)
 ```

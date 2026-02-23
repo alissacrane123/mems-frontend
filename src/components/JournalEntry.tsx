@@ -1,35 +1,25 @@
+import { formatDate, formatTime } from '@/lib/format';
+import type { Entry } from '@/types';
+
 interface JournalEntryProps {
-  id: string;
-  content: string;
-  date: string;
-  time: string;
-  location: string;
-  photos?: string[];
-  createdByName: string;
+  entry: Entry;
   isOwnPost: boolean;
 }
 
-export default function JournalEntry({
-  id,
-  content,
-  date,
-  time,
-  location,
-  photos = [],
-  createdByName,
-  isOwnPost
-}: JournalEntryProps) {
+export default function JournalEntry({ entry, isOwnPost }: JournalEntryProps) {
+  const { content, created_at, location, photos = [], created_by_name } = entry;
+  const date = formatDate(created_at);
+  const time = formatTime(created_at);
+
   return (
     <div className={`flex ${isOwnPost ? 'justify-end' : 'justify-start'} mb-6`}>
       <div className={`max-w-[85%] sm:max-w-[75%] ${isOwnPost ? 'items-end' : 'items-start'} flex flex-col`}>
-        {/* Author Name */}
         <div className={`mb-1 px-1 ${isOwnPost ? 'text-right' : 'text-left'}`}>
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {isOwnPost ? 'You' : createdByName}
+            {isOwnPost ? 'You' : created_by_name}
           </span>
         </div>
 
-        {/* Message Bubble */}
         <article
           className={`rounded-2xl shadow-sm p-4 transition-colors duration-200 ${
             isOwnPost
@@ -37,15 +27,13 @@ export default function JournalEntry({
               : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-bl-sm'
           }`}
         >
-          {/* Content */}
           <div className={`leading-relaxed whitespace-pre-wrap mb-2 ${
             isOwnPost ? 'text-white' : 'text-gray-900 dark:text-gray-100'
           }`}>
             {content}
           </div>
 
-          {/* Photos */}
-          {photos && photos.length > 0 && (
+          {photos.length > 0 && (
             <div className="mt-3">
               <div
                 className={`grid gap-2 ${
@@ -72,7 +60,6 @@ export default function JournalEntry({
             </div>
           )}
 
-          {/* Metadata Footer */}
           <div className={`flex flex-wrap items-center gap-3 mt-3 pt-2 border-t ${
             isOwnPost
               ? 'border-blue-500'

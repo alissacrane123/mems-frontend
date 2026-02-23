@@ -1,11 +1,31 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Converts snake_case string to camelCase
+function toCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+// Recursively converts all keys in an object or array to camelCase
+function camelizeKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(camelizeKeys);
+  } else if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        toCamel(key),
+        camelizeKeys(value),
+      ])
+    );
+  }
+  return obj;
+}
+
 // Base fetch wrapper that automatically includes credentials (cookies)
 // and sets Content-Type header
 async function apiFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    credentials: "include", // this sends the cookie with every request
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -17,7 +37,8 @@ async function apiFetch(path: string, options: RequestInit = {}) {
     throw new Error(error.error || "Something went wrong");
   }
 
-  return res.json();
+  const data = await res.json();
+  return camelizeKeys(data); // automatically converts all keys
 }
 
 // Auth
