@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
+import Button from '@/components/Button';
 
 interface BoardInfo {
   id: string;
@@ -30,48 +31,34 @@ export default function InvitePage() {
 
   const loadBoardInfo = async () => {
     try {
-      // Find board by invite code
-      const { data: boardData, error: boardError } = await supabase
-        .from('boards')
-        .select('id, name, description')
-        .eq('invite_code', code)
-        .single();
+      const boardData = await api.getBoardByInviteCode(code as string);
 
-      if (boardError || !boardData) {
+      if (!boardData || !boardData.id) {
         setError('Invalid or expired invite link');
         setLoading(false);
         return;
       }
 
-      // Get member count
-      const { count } = await supabase
-        .from('board_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('board_id', boardData.id);
-
       setBoard({
         id: boardData.id,
         name: boardData.name,
         description: boardData.description,
-        member_count: count || 0
+        member_count: boardData.member_count || 0,
       });
 
-      // Check if user is already a member (if logged in)
       if (user) {
-        const { data: memberData } = await supabase
-          .from('board_members')
-          .select('id')
-          .eq('board_id', boardData.id)
-          .eq('user_id', user.id)
-          .single();
-
-        if (memberData) {
-          setAlreadyMember(true);
+        try {
+          const memberCheck = await api.checkIsMember(boardData.id, user.id);
+          if (memberCheck.is_member) {
+            setAlreadyMember(true);
+          }
+        } catch {
+          // Not a member
         }
       }
     } catch (err) {
       console.error('Error loading board info:', err);
-      setError('Failed to load invite information');
+      setError('Invalid or expired invite link');
     } finally {
       setLoading(false);
     }
@@ -84,20 +71,11 @@ export default function InvitePage() {
     setError('');
 
     try {
-      const { error } = await supabase
-        .from('board_members')
-        .insert([{
-          board_id: board.id,
-          user_id: user.id,
-          role: 'member'
-        }]);
-
-      if (error) throw error;
-
+      await api.joinBoard(board.id, user.id);
       router.push(`/boards/${board.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error joining board:', err);
-      setError('Failed to join board');
+      setError(err.message || 'Failed to join board');
     } finally {
       setJoining(false);
     }
@@ -126,12 +104,12 @@ export default function InvitePage() {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             This invite link may be invalid or expired.
           </p>
-          <button
+          <Button
             onClick={() => router.push('/')}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            variant="ghost"
           >
             Go to Home
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -173,40 +151,44 @@ export default function InvitePage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
               Sign in to join this family board
             </p>
-            <button
+            <Button
               onClick={() => router.push('/auth')}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              variant="primary"
+              className="w-full"
             >
               Sign In / Sign Up
-            </button>
+            </Button>
           </div>
         ) : alreadyMember ? (
           <div className="space-y-3">
             <p className="text-sm text-green-700 dark:text-green-400 text-center">
               You're already a member of this board!
             </p>
-            <button
+            <Button
               onClick={() => router.push(`/boards/${board.id}`)}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              variant="primary"
+              className="w-full"
             >
               View Board
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
-            <button
+            <Button
               onClick={joinBoard}
               disabled={joining}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
+              className="w-full"
             >
               {joining ? 'Joining...' : 'Join Board'}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => router.push('/')}
-              className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              variant="secondary"
+              className="w-full"
             >
               Maybe Later
-            </button>
+            </Button>
           </div>
         )}
       </div>

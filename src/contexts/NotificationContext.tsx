@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
 
 export interface Notification {
   id: string;
@@ -49,14 +49,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
+      const data = await api.getNotifications();
       setNotifications(data || []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -69,15 +62,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const markAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
-
-      if (error) throw error;
-
+      await api.markAsRead(notificationId);
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
@@ -86,18 +73,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const markAllAsRead = async () => {
+  const handleMarkAllAsRead = async () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
-
+      await api.markAllAsRead();
       setNotifications(prev =>
         prev.map(n => ({ ...n, is_read: true }))
       );
@@ -110,43 +90,26 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) return { success: false, error: 'Not authenticated' };
 
     try {
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('board_members')
-        .select('id')
-        .eq('board_id', boardId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingMember) {
-        await markAsRead(notificationId);
-        return { success: false, error: 'Already a member of this board' };
-      }
-
-      // Insert into board_members
-      const { error: insertError } = await supabase
-        .from('board_members')
-        .insert([{
-          board_id: boardId,
-          user_id: user.id,
-          role: 'member'
-        }]);
-
-      if (insertError) throw insertError;
-
-      // Mark notification as read
-      await markAsRead(notificationId);
-
+      await api.acceptInvite(notificationId, boardId);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
       return { success: true };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error accepting board invitation:', err);
-      return { success: false, error: 'Failed to accept invitation' };
+      return { success: false, error: err.message || 'Failed to accept invitation' };
     }
   };
 
   const declineBoardInvitation = async (notificationId: string) => {
-    // Just mark as read, keep in history
-    await markAsRead(notificationId);
+    try {
+      await api.declineInvite(notificationId);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+    } catch (err) {
+      console.error('Error declining invitation:', err);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -157,8 +120,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       unreadCount,
       loading,
       fetchNotifications,
-      markAsRead,
-      markAllAsRead,
+      markAsRead: handleMarkAsRead,
+      markAllAsRead: handleMarkAllAsRead,
       acceptBoardInvitation,
       declineBoardInvitation,
     }}>

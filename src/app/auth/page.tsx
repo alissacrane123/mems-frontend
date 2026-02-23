@@ -159,7 +159,7 @@ export default function AuthPage() {
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
@@ -193,7 +193,7 @@ export default function AuthPage() {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
@@ -231,7 +231,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95 transition-all"
             >
               {loading ? 'Please wait...' : (isSignUp ? 'Sign up' : 'Sign in')}
             </button>
@@ -240,7 +240,7 @@ export default function AuthPage() {
           <div className="text-center">
             <button
               type="button"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 cursor-pointer"
               onClick={() => setIsSignUp(!isSignUp)}
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}

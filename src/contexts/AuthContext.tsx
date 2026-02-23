@@ -1,12 +1,17 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
   loading: boolean;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -16,69 +21,57 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+      try {
+        const data = await api.getSession();
+        setUser(data.user ?? null);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        }
-      }
-    });
-    return { error };
+    try {
+      const data = await api.signup({ email, password, first_name: firstName, last_name: lastName });
+      setUser(data.user ?? null);
+      return { error: null };
+    } catch (err: any) {
+      return { error: { message: err.message || 'Signup failed' } };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const data = await api.signin({ email, password });
+      setUser(data.user ?? null);
+      return { error: null };
+    } catch (err: any) {
+      return { error: { message: err.message || 'Sign in failed' } };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      await api.signout();
+      setUser(null);
+      return { error: null };
+    } catch (err: any) {
+      return { error: { message: err.message || 'Sign out failed' } };
+    }
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      session,
       loading,
       signUp,
       signIn,

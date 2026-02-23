@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import * as api from "@/lib/api";
 import JournalEntry from "@/components/JournalEntry";
 import AddMemoryForm from "@/components/AddMemoryForm";
 import InviteMemberModal from "@/components/InviteMemberModal";
+import Button from "@/components/Button";
 
 interface Board {
   id: string;
@@ -54,40 +55,19 @@ export default function Home() {
     }
   }, [selectedBoardId]);
 
-  useEffect(() => {
-    console.log("showCreateBoard state changed to:", showCreateBoard);
-  }, [showCreateBoard]);
-
   const loadUserBoards = async () => {
     try {
-      const { data, error } = await supabase
-        .from("boards")
-        .select(
-          `
-          id,
-          name,
-          description,
-          board_members!inner (
-            role,
-            user_id
-          )
-        `
-        )
-        .eq("board_members.user_id", user?.id)
-        .order("name");
-
-      if (error) throw error;
-
-      const boardsData: Board[] = (data || []).map((board) => ({
+      const data = await api.getBoards();
+      const boardsData: Board[] = (data || []).map((board: any) => ({
         id: board.id,
         name: board.name,
         description: board.description,
-        role: board.board_members[0]?.role || "member",
+        role: board.role || "member",
+        invite_code: board.invite_code,
       }));
 
       setBoards(boardsData);
 
-      // Auto-select first board if available
       if (boardsData.length > 0 && !selectedBoardId) {
         setSelectedBoardId(boardsData[0].id);
       }
@@ -103,33 +83,10 @@ export default function Home() {
 
     setLoadingEntries(true);
     try {
-      const { data, error } = await supabase
-        .from("entries")
-        .select(
-          `
-          id,
-          content,
-          created_at,
-          location,
-          user_id,
-          photos (
-            file_path
-          ),
-          profiles!user_id (
-            first_name
-          )
-        `
-        )
-        .eq("board_id", selectedBoardId)
-        .order("created_at", { ascending: false });
+      const data = await api.getEntries(selectedBoardId);
 
-      if (error) throw error;
-
-      // Format entries
-      const formattedEntries: Entry[] = (data || []).map((entry) => {
+      const formattedEntries: Entry[] = (data || []).map((entry: any) => {
         const createdAt = new Date(entry.created_at);
-        const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
-
         return {
           id: entry.id,
           content: entry.content,
@@ -144,9 +101,8 @@ export default function Home() {
             hour12: true,
           }),
           location: entry.location,
-          photos: (entry.photos || [])
-            .map((photo) => photo.file_path),
-          created_by_name: profile?.first_name || 'Unknown',
+          photos: entry.photos || [],
+          created_by_name: entry.created_by_name || "Unknown",
           user_id: entry.user_id,
         };
       });
@@ -164,19 +120,7 @@ export default function Home() {
     if (!newBoardName.trim()) return;
 
     try {
-      const { data, error } = await supabase
-        .from("boards")
-        .insert([
-          {
-            name: newBoardName.trim(),
-            created_by: user?.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      const data = await api.createBoard({ name: newBoardName.trim() });
       setNewBoardName("");
       setShowCreateBoard(false);
       await loadUserBoards();
@@ -186,7 +130,6 @@ export default function Home() {
     }
   };
 
-  // Show loading state while checking authentication
   if (loading || loadingBoards) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -195,12 +138,10 @@ export default function Home() {
     );
   }
 
-  // If no user, return null (redirect is happening)
   if (!user) {
     return null;
   }
 
-  // If no boards exist, show onboarding
   if (boards.length === 0) {
     return (
       <>
@@ -226,16 +167,16 @@ export default function Home() {
               Create your first family board to start capturing precious
               memories.
             </p>
-            <button
+            <Button
               onClick={() => setShowCreateBoard(true)}
-              className="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              variant="primary"
+              size="lg"
             >
               Create Your First Board
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Create Board Modal */}
         {showCreateBoard && (
           <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
@@ -252,20 +193,21 @@ export default function Home() {
                   autoFocus
                 />
                 <div className="flex space-x-3 pt-2">
-                  <button
+                  <Button
                     type="submit"
                     disabled={!newBoardName.trim()}
-                    className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    variant="primary"
+                    className="flex-1"
                   >
                     Create Board
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => setShowCreateBoard(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+                    variant="secondary"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -319,26 +261,26 @@ export default function Home() {
             )}
           </div>
           <div className="flex space-x-3">
-            <button
+            <Button
               onClick={() => setShowCreateBoard(true)}
-              className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+              variant="ghost"
             >
               New Board
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowInviteModal(true)}
               disabled={!selectedBoardId}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="secondary"
             >
               Invite Members
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowAddMemory(true)}
               disabled={!selectedBoardId}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
             >
               Add Memory
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -359,20 +301,21 @@ export default function Home() {
                   autoFocus
                 />
                 <div className="flex space-x-3 pt-2">
-                  <button
+                  <Button
                     type="submit"
                     disabled={!newBoardName.trim()}
-                    className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    variant="primary"
+                    className="flex-1"
                   >
                     Create Board
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => setShowCreateBoard(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+                    variant="secondary"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -434,12 +377,13 @@ export default function Home() {
                       Start capturing precious moments for {selectedBoard?.name}
                       .
                     </p>
-                    <button
+                    <Button
                       onClick={() => setShowAddMemory(true)}
-                      className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      variant="primary"
+                      className="mt-4"
                     >
                       Add Your First Memory
-                    </button>
+                    </Button>
                   </div>
                 )}
           </div>

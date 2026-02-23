@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
+import Button from './Button';
 
 interface AddMemoryFormProps {
   boardId: string;
@@ -14,8 +15,71 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+
+    const validFiles = files.filter(file => {
+      const fileName = file.name.toLowerCase();
+      const isHEIC = fileName.endsWith('.heic') || fileName.endsWith('.heif') ||
+                     file.type === 'image/heic' || file.type === 'image/heif';
+
+      if (isHEIC) return false;
+
+      const isValidImage = file.type.startsWith('image/') &&
+                          (file.type === 'image/jpeg' ||
+                           file.type === 'image/jpg' ||
+                           file.type === 'image/png' ||
+                           file.type === 'image/gif' ||
+                           file.type === 'image/webp');
+      const isUnder10MB = file.size <= 10 * 1024 * 1024;
+      return isValidImage && isUnder10MB;
+    });
+
+    const hasHEIC = files.some(file => {
+      const fileName = file.name.toLowerCase();
+      return fileName.endsWith('.heic') || fileName.endsWith('.heif') ||
+             file.type === 'image/heic' || file.type === 'image/heif';
+    });
+
+    if (hasHEIC) {
+      setError('HEIC/HEIF files are not supported. Please convert to JPG or PNG first, or take photos in a compatible format in your camera settings.');
+    } else if (validFiles.length !== files.length) {
+      setError('Some files were skipped (only JPG, PNG, GIF, WebP under 10MB are allowed)');
+    } else {
+      setError('');
+    }
+
+    const remainingSlots = 10 - selectedFiles.length;
+    const filesToAdd = validFiles.slice(0, remainingSlots);
+
+    const newUrls = filesToAdd.map(file => URL.createObjectURL(file));
+
+    setSelectedFiles(prev => [...prev, ...filesToAdd]);
+    setPreviewUrls(prev => [...prev, ...newUrls]);
+
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index]);
+    }
+
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,25 +89,34 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
     setError('');
 
     try {
-      const { error } = await supabase
-        .from('entries')
-        .insert([{
-          board_id: boardId,
-          user_id: user.id,
-          content: content.trim(),
-          location: location.trim() || null
-        }]);
+      const entry = await api.createEntry(boardId, {
+        content: content.trim(),
+        location: location.trim() || undefined,
+      });
 
-      if (error) throw error;
+      if (selectedFiles.length > 0) {
+        setUploadingPhotos(true);
+
+        const photoUploads = selectedFiles.map((file, index) =>
+          api.uploadPhoto(entry.id, file, index)
+        );
+
+        await Promise.all(photoUploads);
+      }
+
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
 
       setContent('');
       setLocation('');
+      setSelectedFiles([]);
+      setPreviewUrls([]);
       onSuccess();
     } catch (err) {
       console.error('Error creating entry:', err);
-      setError('Failed to create memory');
+      setError('Failed to create memory. Please try again.');
     } finally {
       setLoading(false);
+      setUploadingPhotos(false);
     }
   };
 
@@ -56,7 +129,7 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
           </h3>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer active:scale-95 transition-all"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -112,19 +185,77 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
             />
           </div>
 
-          {/* Photo Upload Placeholder */}
+          {/* Photo Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Photos (Coming Soon)
+              Photos (up to 10, max 10MB each)
             </label>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Photo upload will be available soon
-              </p>
+
+            {/* File Input */}
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+              <input
+                type="file"
+                id="photo-upload"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={selectedFiles.length >= 10}
+              />
+              <label
+                htmlFor="photo-upload"
+                className="cursor-pointer"
+              >
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {selectedFiles.length >= 10
+                    ? 'Maximum 10 photos reached'
+                    : 'Click to select photos or drag and drop'}
+                </p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                  JPG, PNG, GIF, WebP up to 10MB (HEIC not supported)
+                </p>
+              </label>
             </div>
+
+            {/* Selected Photos Preview */}
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <div className="w-full h-24 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                      {previewUrls[index] ? (
+                        <img
+                          src={previewUrls[index]}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-1 left-1 bg-black bg-opacity-60 text-white text-xs px-1.5 py-0.5 rounded">
+                      {(file.size / 1024 / 1024).toFixed(1)}MB
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Auto-captured info */}
@@ -150,20 +281,22 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
 
           {/* Actions */}
           <div className="flex space-x-3 pt-4">
-            <button
+            <Button
               type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+              variant="secondary"
+              className="flex-1"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading || !content.trim()}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
+              className="flex-1"
             >
-              {loading ? 'Saving...' : 'Save Memory'}
-            </button>
+              {uploadingPhotos ? 'Uploading photos...' : loading ? 'Saving...' : 'Save Memory'}
+            </Button>
           </div>
         </form>
       </div>

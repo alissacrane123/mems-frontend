@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
+import Button from './Button';
 
 interface InviteMemberModalProps {
   boardId: string;
@@ -28,21 +29,13 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
     try {
       const emailLower = email.toLowerCase().trim();
 
-      // Check if trying to invite themselves
       if (emailLower === user.email?.toLowerCase()) {
         setError('You cannot invite yourself');
         setLoading(false);
         return;
       }
 
-      // Lookup user by email
-      const lookupResponse = await fetch('/api/users/lookup-by-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailLower })
-      });
-
-      const lookupData = await lookupResponse.json();
+      const lookupData = await api.lookupByEmail(emailLower);
 
       if (!lookupData.exists) {
         setError('No user found with this email. They need to sign up first.');
@@ -52,62 +45,42 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
 
       const targetUserId = lookupData.userId;
 
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('board_members')
-        .select('id')
-        .eq('board_id', boardId)
-        .eq('user_id', targetUserId)
-        .single();
+      const memberCheck = await api.checkIsMember(boardId, targetUserId);
 
-      if (existingMember) {
+      if (memberCheck.is_member) {
         setError('This user is already a member of the board');
         setLoading(false);
         return;
       }
 
-      // Check if invitation already sent (unread notification exists)
-      const { data: existingNotification } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', targetUserId)
-        .eq('type', 'board_invitation')
-        .eq('is_read', false)
-        .contains('data', { board_id: boardId })
-        .single();
+      const inviteCheck = await api.checkInvite(targetUserId, boardId);
 
-      if (existingNotification) {
+      if (inviteCheck.exists) {
         setError('An invitation has already been sent to this user');
         setLoading(false);
         return;
       }
 
-      // Create notification
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert([{
-          user_id: targetUserId,
-          type: 'board_invitation',
-          data: {
-            board_id: boardId,
-            board_name: boardName,
-            invited_by_id: user.id,
-            invited_by_email: user.email
-          }
-        }]);
-
-      if (notificationError) throw notificationError;
+      await api.createNotification({
+        user_id: targetUserId,
+        type: 'board_invitation',
+        data: {
+          board_id: boardId,
+          board_name: boardName,
+          invited_by_id: user.id,
+          invited_by_email: user.email,
+        },
+      });
 
       setSuccess(true);
       setEmail('');
 
-      // Auto-close after 1.5 seconds
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sending invitation:', err);
-      setError('Failed to send invitation. Please try again.');
+      setError(err.message || 'Failed to send invitation. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -168,20 +141,21 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
           </div>
 
           <div className="flex space-x-3 pt-2">
-            <button
+            <Button
               type="submit"
               disabled={loading || !email.trim() || success}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
+              className="flex-1"
             >
               {loading ? 'Sending...' : success ? 'Sent!' : 'Send Invitation'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              variant="secondary"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>

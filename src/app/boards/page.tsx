@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import * as api from '@/lib/api';
+import Button from '@/components/Button';
 
 interface Board {
   id: string;
@@ -36,44 +37,8 @@ export default function BoardsPage() {
 
   const loadBoards = async () => {
     try {
-      const { data, error } = await supabase
-        .from('boards')
-        .select(`
-          id,
-          name,
-          description,
-          invite_code,
-          created_at,
-          board_members!inner (
-            role,
-            user_id
-          )
-        `)
-        .eq('board_members.user_id', user?.id);
-
-      if (error) throw error;
-
-      // Get member counts for each board
-      const boardsWithCounts = await Promise.all(
-        (data || []).map(async (board) => {
-          const { count } = await supabase
-            .from('board_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('board_id', board.id);
-
-          return {
-            id: board.id,
-            name: board.name,
-            description: board.description,
-            invite_code: board.invite_code,
-            created_at: board.created_at,
-            role: board.board_members[0]?.role || 'member',
-            member_count: count || 0
-          };
-        })
-      );
-
-      setBoards(boardsWithCounts);
+      const data = await api.getBoards();
+      setBoards(data || []);
     } catch (err) {
       console.error('Error loading boards:', err);
       setError('Failed to load boards');
@@ -87,18 +52,10 @@ export default function BoardsPage() {
     setError('');
 
     try {
-      const { data, error } = await supabase
-        .from('boards')
-        .insert([{
-          name: newBoard.name,
-          description: newBoard.description,
-          created_by: user?.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      await api.createBoard({
+        name: newBoard.name,
+        description: newBoard.description || undefined,
+      });
       setNewBoard({ name: '', description: '' });
       setShowCreateForm(false);
       loadBoards();
@@ -113,55 +70,34 @@ export default function BoardsPage() {
     setError('');
 
     try {
-      // First, find the board by invite code
-      const { data: board, error: boardError } = await supabase
-        .from('boards')
-        .select('id')
-        .eq('invite_code', joinCode.trim())
-        .single();
+      const board = await api.getBoardByInviteCode(joinCode.trim());
 
-      if (boardError || !board) {
+      if (!board || !board.id) {
         setError('Invalid invite code');
         return;
       }
 
-      // Check if user is already a member
-      const { data: existingMember } = await supabase
-        .from('board_members')
-        .select('id')
-        .eq('board_id', board.id)
-        .eq('user_id', user?.id)
-        .single();
+      const memberCheck = await api.checkIsMember(board.id, user!.id);
 
-      if (existingMember) {
+      if (memberCheck.is_member) {
         setError('You are already a member of this board');
         return;
       }
 
-      // Add user as member
-      const { error: memberError } = await supabase
-        .from('board_members')
-        .insert([{
-          board_id: board.id,
-          user_id: user?.id,
-          role: 'member'
-        }]);
-
-      if (memberError) throw memberError;
+      await api.joinBoard(board.id, user!.id);
 
       setJoinCode('');
       setShowJoinForm(false);
       loadBoards();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error joining board:', err);
-      setError('Failed to join board');
+      setError(err.message || 'Failed to join board');
     }
   };
 
   const copyInviteLink = (inviteCode: string) => {
     const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
     navigator.clipboard.writeText(inviteUrl);
-    // TODO: Show success toast
   };
 
   if (authLoading || loading) {
@@ -186,18 +122,18 @@ export default function BoardsPage() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <button
+          <Button
             onClick={() => setShowJoinForm(true)}
-            className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+            variant="ghost"
           >
             Join Board
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            variant="primary"
           >
             Create Board
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -245,19 +181,21 @@ export default function BoardsPage() {
                 />
               </div>
               <div className="flex space-x-3 pt-4">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  variant="primary"
+                  className="flex-1"
                 >
                   Create Board
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -287,19 +225,21 @@ export default function BoardsPage() {
                 />
               </div>
               <div className="flex space-x-3 pt-4">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowJoinForm(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  variant="primary"
+                  className="flex-1"
                 >
                   Join Board
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -331,15 +271,16 @@ export default function BoardsPage() {
             </div>
 
             <div className="flex space-x-2">
-              <button
+              <Button
                 onClick={() => router.push(`/boards/${board.id}`)}
-                className="flex-1 px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                variant="primary"
+                size="sm"
               >
                 View Board
-              </button>
+              </Button>
               <button
                 onClick={() => copyInviteLink(board.invite_code)}
-                className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer active:scale-95"
                 title="Copy invite link"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
