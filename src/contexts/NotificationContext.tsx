@@ -7,18 +7,18 @@ import * as api from '@/lib/api';
 export interface Notification {
   id: string;
   type: 'board_invitation' | 'new_memory' | 'user_joined' | 'comment' | 'mention';
-  is_read: boolean;
-  created_at: string;
+  isRead: boolean;
+  createdAt: string;
   data: {
-    board_id?: string;
-    board_name?: string;
-    invited_by_id?: string;
-    invited_by_email?: string;
-    entry_id?: string;
-    created_by_id?: string;
-    created_by_email?: string;
-    user_id?: string;
-    user_email?: string;
+    boardId?: string;
+    boardName?: string;
+    invitedById?: string;
+    invitedByEmail?: string;
+    entryId?: string;
+    createdById?: string;
+    createdByEmail?: string;
+    userId?: string;
+    userEmail?: string;
     [key: string]: any;
   };
 }
@@ -66,7 +66,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       await api.markAsRead(notificationId);
       setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
@@ -79,7 +79,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       await api.markAllAsRead();
       setNotifications(prev =>
-        prev.map(n => ({ ...n, is_read: true }))
+        prev.map(n => ({ ...n, isRead: true }))
       );
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
@@ -92,7 +92,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       await api.acceptInvite(notificationId, boardId);
       setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
       return { success: true };
     } catch (err: any) {
@@ -105,14 +105,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       await api.declineInvite(notificationId);
       setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
     } catch (err) {
       console.error('Error declining invitation:', err);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <NotificationContext.Provider value={{

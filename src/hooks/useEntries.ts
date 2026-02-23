@@ -22,10 +22,10 @@ export function useEntries(boardId: string | null) {
       const fetched: Entry[] = (data || []).map((e: any) => ({
         id: e.id,
         content: e.content,
-        created_at: e.created_at,
+        createdAt: e.createdAt,
         location: e.location,
-        user_id: e.user_id,
-        created_by_name: e.created_by_name || 'Unknown',
+        userId: e.userId,
+        createdByName: e.createdByName || 'Unknown',
         photos: e.photos || [],
       }));
       setEntries(fetched);

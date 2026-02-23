@@ -10,7 +10,7 @@ interface BoardInfo {
   id: string;
   name: string;
   description: string | null;
-  member_count: number;
+  memberCount: number;
 }
 
 export default function InvitePage() {
@@ -43,13 +43,13 @@ export default function InvitePage() {
         id: boardData.id,
         name: boardData.name,
         description: boardData.description,
-        member_count: boardData.member_count || 0,
+        memberCount: boardData.memberCount || 0,
       });
 
       if (user) {
         try {
           const memberCheck = await api.checkIsMember(boardData.id, user.id);
-          if (memberCheck.is_member) {
+          if (memberCheck.isMember) {
             setAlreadyMember(true);
           }
         } catch {
@@ -134,7 +134,7 @@ export default function InvitePage() {
             </p>
           )}
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-            {board.member_count} members
+            {board.memberCount} members
           </p>
         </div>
 

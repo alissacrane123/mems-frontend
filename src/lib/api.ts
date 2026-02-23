@@ -1,5 +1,26 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Converts camelCase string to snake_case
+function toSnake(str: string): string {
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+// Recursively converts all keys in an object or array to snake_case
+function snakelizeKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(snakelizeKeys);
+  } else if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        toSnake(key),
+        snakelizeKeys(value),
+      ])
+    );
+  }
+  return obj;
+}
+
+
 // Converts snake_case string to camelCase
 function toCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -30,6 +51,10 @@ async function apiFetch(path: string, options: RequestInit = {}) {
       "Content-Type": "application/json",
       ...options.headers,
     },
+    // Automatically convert request body keys to snake_case
+    body: options.body 
+      ? JSON.stringify(snakelizeKeys(JSON.parse(options.body as string))) 
+      : undefined,
   });
 
   if (!res.ok) {
@@ -38,7 +63,8 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   const data = await res.json();
-  return camelizeKeys(data); // automatically converts all keys
+  // Automatically convert response keys to camelCase
+  return camelizeKeys(data);
 }
 
 // Auth

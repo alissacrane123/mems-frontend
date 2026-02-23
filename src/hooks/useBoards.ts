@@ -22,10 +22,10 @@ export function useBoards({ autoSelect = true }: UseBoardsOptions = {}) {
         id: b.id,
         name: b.name,
         description: b.description,
-        invite_code: b.invite_code ?? '',
+        inviteCode: b.inviteCode ?? '',
         role: b.role || 'member',
-        member_count: b.member_count ?? 0,
-        created_at: b.created_at,
+        memberCount: b.memberCount ?? 0,
+        createdAt: b.createdAt,
       }));
       setBoards(fetched);
       return fetched;

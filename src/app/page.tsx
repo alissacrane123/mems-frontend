@@ -149,7 +149,7 @@ export default function Home() {
             <JournalEntry
               key={entry.id}
               entry={entry}
-              isOwnPost={entry.user_id === user.id}
+              isOwnPost={entry.userId === user.id}
             />
           ))}
         </div>

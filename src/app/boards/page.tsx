@@ -10,10 +10,10 @@ interface Board {
   id: string;
   name: string;
   description: string | null;
-  invite_code: string;
-  created_at: string;
+  inviteCode: string;
+  createdAt: string;
   role: string;
-  member_count: number;
+  memberCount: number;
 }
 
 export default function BoardsPage() {
@@ -79,7 +79,7 @@ export default function BoardsPage() {
 
       const memberCheck = await api.checkIsMember(board.id, user!.id);
 
-      if (memberCheck.is_member) {
+      if (memberCheck.isMember) {
         setError('You are already a member of this board');
         return;
       }
@@ -265,7 +265,7 @@ export default function BoardsPage() {
                 )}
                 <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                   <span className="capitalize">{board.role}</span>
-                  <span>{board.member_count} members</span>
+                  <span>{board.memberCount} members</span>
                 </div>
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function BoardsPage() {
                 View Board
               </Button>
               <button
-                onClick={() => copyInviteLink(board.invite_code)}
+                onClick={() => copyInviteLink(board.inviteCode)}
                 className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer active:scale-95"
                 title="Copy invite link"
               >

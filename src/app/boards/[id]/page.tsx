@@ -46,9 +46,9 @@ export default function BoardPage() {
         id: boardData.id,
         name: boardData.name,
         description: boardData.description,
-        invite_code: boardData.invite_code,
+        inviteCode: boardData.inviteCode,
         role: boardData.role || 'member',
-        member_count: boardData.member_count || 0,
+        memberCount: boardData.memberCount || 0,
       });
 
       const entriesData = await api.getEntries(id as string);
@@ -56,10 +56,10 @@ export default function BoardPage() {
       const mapped: Entry[] = (entriesData || []).map((e: any) => ({
         id: e.id,
         content: e.content,
-        created_at: e.created_at,
+        createdAt: e.createdAt,
         location: e.location,
-        user_id: e.user_id,
-        created_by_name: e.created_by_name || 'Unknown',
+        userId: e.userId,
+        createdByName: e.createdByName || 'Unknown',
         photos: e.photos || [],
       }));
 
@@ -74,7 +74,7 @@ export default function BoardPage() {
 
   const copyInviteLink = () => {
     if (board) {
-      const inviteUrl = `${window.location.origin}/invite/${board.invite_code}`;
+      const inviteUrl = `${window.location.origin}/invite/${board.inviteCode}`;
       navigator.clipboard.writeText(inviteUrl);
     }
   };
@@ -154,7 +154,7 @@ export default function BoardPage() {
             <JournalEntry
               key={entry.id}
               entry={entry}
-              isOwnPost={entry.user_id === user?.id}
+              isOwnPost={entry.userId === user?.id}
             />
           ))
         ) : (

@@ -47,7 +47,7 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
 
       const memberCheck = await api.checkIsMember(boardId, targetUserId);
 
-      if (memberCheck.is_member) {
+      if (memberCheck.isMember) {
         setError('This user is already a member of the board');
         setLoading(false);
         return;

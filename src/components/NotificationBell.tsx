@@ -42,7 +42,7 @@ export default function NotificationBell() {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.is_read) {
+    if (!notification.isRead) {
       await markAsRead(notification.id);
     }
   };
@@ -141,15 +141,15 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
         return (
           <div className="space-y-2">
             <p className="text-sm text-gray-900 dark:text-gray-100">
-              <span className="font-medium">{notification.data.invited_by_email}</span> invited you to join{' '}
-              <span className="font-medium">{notification.data.board_name}</span>
+              <span className="font-medium">{notification.data.invitedByEmail}</span> invited you to join{' '}
+              <span className="font-medium">{notification.data.boardName}</span>
             </p>
-            {!notification.is_read && (
+            {!notification.isRead && (
               <div className="flex space-x-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onAccept(notification.id, notification.data.board_id!);
+                    onAccept(notification.id, notification.data.boardId!);
                   }}
                   disabled={isAccepting}
                   className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer active:scale-95"
@@ -168,7 +168,7 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
                 </button>
               </div>
             )}
-            {notification.is_read && (
+            {notification.isRead && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 You declined this invitation
               </p>
@@ -179,16 +179,16 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
       case 'new_memory':
         return (
           <p className="text-sm text-gray-900 dark:text-gray-100">
-            <span className="font-medium">{notification.data.created_by_email}</span> added a new memory to{' '}
-            <span className="font-medium">{notification.data.board_name}</span>
+            <span className="font-medium">{notification.data.createdByEmail}</span> added a new memory to{' '}
+            <span className="font-medium">{notification.data.boardName}</span>
           </p>
         );
 
       case 'user_joined':
         return (
           <p className="text-sm text-gray-900 dark:text-gray-100">
-            <span className="font-medium">{notification.data.user_email}</span> joined{' '}
-            <span className="font-medium">{notification.data.board_name}</span>
+            <span className="font-medium">{notification.data.userEmail}</span> joined{' '}
+            <span className="font-medium">{notification.data.boardName}</span>
           </p>
         );
 
@@ -205,17 +205,17 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
     <div
       onClick={onClick}
       className={`px-4 py-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-        !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+        !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/10' : ''
       }`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           {renderContent()}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {formatTimeAgo(notification.created_at)}
+            {formatTimeAgo(notification.createdAt)}
           </p>
         </div>
-        {!notification.is_read && (
+        {!notification.isRead && (
           <div className="ml-2 flex-shrink-0">
             <div className="h-2 w-2 rounded-full bg-blue-600"></div>
           </div>

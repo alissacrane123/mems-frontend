@@ -7,16 +7,16 @@ interface JournalEntryProps {
 }
 
 export default function JournalEntry({ entry, isOwnPost }: JournalEntryProps) {
-  const { content, created_at, location, photos = [], created_by_name } = entry;
-  const date = formatDate(created_at);
-  const time = formatTime(created_at);
+  const { content, createdAt, location, photos = [], createdByName } = entry;
+  const date = formatDate(createdAt);
+  const time = formatTime(createdAt);
 
   return (
     <div className={`flex ${isOwnPost ? 'justify-end' : 'justify-start'} mb-6`}>
       <div className={`max-w-[85%] sm:max-w-[75%] ${isOwnPost ? 'items-end' : 'items-start'} flex flex-col`}>
         <div className={`mb-1 px-1 ${isOwnPost ? 'text-right' : 'text-left'}`}>
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {isOwnPost ? 'You' : created_by_name}
+            {isOwnPost ? 'You' : createdByName}
           </span>
         </div>
 
