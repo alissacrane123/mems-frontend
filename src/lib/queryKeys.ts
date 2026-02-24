@@ -7,4 +7,6 @@ export const queryKeys = {
   session: ['session'] as const,
   memberCheck: (boardId: string, userId: string) =>
     ['memberCheck', boardId, userId] as const,
+  notes: ['notes'] as const,
+  note: (id: string) => ['notes', id] as const,
 };

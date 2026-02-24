@@ -24,7 +24,7 @@
 
 ---
 
-## Database Schema (7 tables)
+## Database Schema (8 tables)
 
 ### 1. `users`
 
@@ -111,6 +111,19 @@
 | `user_joined`      | `board_id`, `board_name`, `user_id`, `user_email`                |
 | `comment`          | no constraint defined                                            |
 | `mention`          | no constraint defined                                            |
+
+### 8. `notes`
+
+| Field        | Type          | Constraints                                         |
+| ------------ | ------------- | --------------------------------------------------- |
+| `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()              |
+| `user_id`    | `UUID`        | FK → `users(id)` ON DELETE CASCADE, NOT NULL        |
+| `title`      | `TEXT`        | NOT NULL, DEFAULT 'Untitled Note'                   |
+| `content`    | `TEXT`        | nullable                                            |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
+
+> Index on `user_id`. Has `BEFORE UPDATE` trigger to auto-set `updated_at = now()`.
 
 ---
 
@@ -563,6 +576,73 @@ Check if a pending (unread) board invitation already exists for a user. **Protec
   { "exists": true }
   ```
 
+### Notes (5 endpoints)
+
+#### `GET /api/notes`
+
+Get all notes for the current user (newest updated first). **Protected.**
+
+- **Response:**
+  ```json
+  [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "title": "string",
+      "content": "string | null",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ]
+  ```
+
+#### `POST /api/notes`
+
+Create a new note for the current user. **Protected.**
+
+- **Request body:**
+  ```json
+  { "title": "string (optional, defaults to 'Untitled Note')" }
+  ```
+- **Response:**
+  ```json
+  { "id": "uuid", "user_id": "uuid", "title": "string", "content": null, "created_at": "timestamp", "updated_at": "timestamp" }
+  ```
+
+#### `GET /api/notes/{id}`
+
+Get a single note by ID. Returns 404 if not found or not owned by user. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Response:**
+  ```json
+  { "id": "uuid", "user_id": "uuid", "title": "string", "content": "string | null", "created_at": "timestamp", "updated_at": "timestamp" }
+  ```
+
+#### `PATCH /api/notes/{id}`
+
+Update a note's title and/or content. The `updated_at` trigger fires automatically. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Request body:**
+  ```json
+  { "title": "string (optional)", "content": "string (optional)" }
+  ```
+- **Response:**
+  ```json
+  { "id": "uuid", "user_id": "uuid", "title": "string", "content": "string", "created_at": "timestamp", "updated_at": "timestamp" }
+  ```
+
+#### `DELETE /api/notes/{id}`
+
+Delete a note. Returns 404 if not found or not owned by user. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Response:**
+  ```json
+  { "success": true }
+  ```
+
 ---
 
 ## Authorization Summary
@@ -584,6 +664,7 @@ All other endpoints require a valid JWT in the `token` HttpOnly cookie.
 | Notifications  | Users can only read/update their own; any authed user can create     |
 | Profiles       | Readable by all authenticated users; writable only by the owner      |
 | Board Members  | Viewable by fellow board members; self-join via invite               |
+| Notes          | Users can only CRUD their own notes                                  |
 
 ---
 
@@ -593,10 +674,11 @@ All other endpoints require a valid JWT in the `token` HttpOnly cookie.
 2. **On board creation:** Generate a random invite code, insert the board, then insert a `board_members` row with `role: 'owner'` for the creator.
 3. **On invite accept:** Check existing membership, then insert `board_members` with `role: 'member'`, and mark the notification as read.
 4. **Photo upload:** Save file to local filesystem at `{user_id}/{entry_id}/{timestamp}{ext}`, insert `photos` record, return public URL.
+5. **Note update:** The `update_updated_at` trigger automatically sets `updated_at = now()` on every `UPDATE` to `notes`.
 
 ---
 
-## Endpoint Summary (27 total)
+## Endpoint Summary (32 total)
 
 ```
 GET    /api/health                            (public)
@@ -633,4 +715,10 @@ PATCH  /api/notifications/read-all             (protected)
 POST   /api/notifications/{id}/accept          (protected)
 POST   /api/notifications/{id}/decline         (protected)
 GET    /api/notifications/check-invite         (protected)
+
+GET    /api/notes                              (protected)
+POST   /api/notes                              (protected)
+GET    /api/notes/{id}                         (protected)
+PATCH  /api/notes/{id}                         (protected)
+DELETE /api/notes/{id}                         (protected)
 ```

@@ -24,3 +24,12 @@ export interface BoardInfo {
   description: string | null;
   memberCount: number;
 }
+
+export interface Note {
+  id: string;
+  userId: string;
+  title: string;
+  content: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

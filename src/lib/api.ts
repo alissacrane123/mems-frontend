@@ -156,3 +156,19 @@ export const declineInvite = (id: string) =>
 
 export const checkInvite = (userId: string, boardId: string) =>
   apiFetch(`/api/notifications/check-invite?user_id=${userId}&board_id=${boardId}`);
+
+// Notes
+export const getNotes = () =>
+  apiFetch("/api/notes");
+
+export const getNote = (id: string) =>
+  apiFetch(`/api/notes/${id}`);
+
+export const createNote = (data: { title?: string }) =>
+  apiFetch("/api/notes", { method: "POST", body: JSON.stringify(data) });
+
+export const updateNote = (id: string, data: { title?: string; content?: string }) =>
+  apiFetch(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+export const deleteNote = (id: string) =>
+  apiFetch(`/api/notes/${id}`, { method: "DELETE" });

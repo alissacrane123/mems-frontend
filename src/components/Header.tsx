@@ -72,6 +72,22 @@ export default function Header() {
                 Mems
               </h1>
             </div>
+            {user && (
+              <nav className="flex items-center space-x-4">
+                <button
+                  onClick={() => router.push("/")}
+                  className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-pointer"
+                >
+                  Boards
+                </button>
+                <button
+                  onClick={() => router.push("/notes")}
+                  className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-pointer"
+                >
+                  Notes
+                </button>
+              </nav>
+            )}
           </div>
 
           <div className="flex items-center space-x-3">
