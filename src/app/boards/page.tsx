@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { useCreateBoard } from "@/hooks/useCreateBoard";
+import { useJoinBoardByInvite } from "@/hooks/useJoinBoard";
 import Button from "@/components/Button";
 import type { Board } from "@/types";
 import { BoardList } from "@/components/boards/BoardList";
@@ -13,7 +15,6 @@ import { BoardList } from "@/components/boards/BoardList";
 export default function BoardsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
@@ -36,56 +37,38 @@ export default function BoardsPage() {
     enabled: !!user,
   });
 
-  const createBoardMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      api.createBoard(data),
-    onSuccess: () => {
-      setNewBoard({ name: "", description: "" });
-      setShowCreateForm(false);
-      setError("");
-      queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-    },
-    onError: (err: Error) => {
-      setError(err.message || "Failed to create board");
-    },
-  });
-
-  const joinBoardMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const board = await api.getBoardByInviteCode(code.trim());
-      if (!board || !board.id) {
-        throw new Error("Invalid invite code");
-      }
-      const memberCheck = await api.checkIsMember(board.id, user!.id);
-      if (memberCheck.isMember) {
-        throw new Error("You are already a member of this board");
-      }
-      await api.joinBoard(board.id, user!.id);
-    },
-    onSuccess: () => {
-      setJoinCode("");
-      setShowJoinForm(false);
-      setError("");
-      queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-    },
-    onError: (err: Error) => {
-      setError(err.message || "Failed to join board");
-    },
-  });
+  const createBoardMutation = useCreateBoard();
+  const joinBoardMutation = useJoinBoardByInvite(user?.id ?? '');
 
   const handleCreateBoard = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    createBoardMutation.mutate({
-      name: newBoard.name,
-      description: newBoard.description || undefined,
-    });
+    createBoardMutation.mutate(
+      { name: newBoard.name, description: newBoard.description || undefined },
+      {
+        onSuccess: () => {
+          setNewBoard({ name: "", description: "" });
+          setShowCreateForm(false);
+        },
+        onError: (err) => {
+          setError(err.message || "Failed to create board");
+        },
+      }
+    );
   };
 
   const handleJoinBoard = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    joinBoardMutation.mutate(joinCode);
+    joinBoardMutation.mutate(joinCode, {
+      onSuccess: () => {
+        setJoinCode("");
+        setShowJoinForm(false);
+      },
+      onError: (err) => {
+        setError(err.message || "Failed to join board");
+      },
+    });
   };
 
   if (authLoading || loading) {

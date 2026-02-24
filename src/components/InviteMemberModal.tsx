@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import * as api from '@/lib/api';
+import { useInviteMember } from '@/hooks/useInviteMember';
 import Button from './Button';
 
 interface InviteMemberModalProps {
@@ -18,61 +17,35 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const inviteMutation = useMutation({
-    mutationFn: async (emailToInvite: string) => {
-      const emailLower = emailToInvite.toLowerCase().trim();
-
-      if (emailLower === user?.email?.toLowerCase()) {
-        throw new Error('You cannot invite yourself');
-      }
-
-      const lookupData = await api.lookupByEmail(emailLower);
-      if (!lookupData.exists) {
-        throw new Error('No user found with this email. They need to sign up first.');
-      }
-
-      const targetUserId = lookupData.userId;
-
-      const memberCheck = await api.checkIsMember(boardId, targetUserId);
-      if (memberCheck.isMember) {
-        throw new Error('This user is already a member of the board');
-      }
-
-      const inviteCheck = await api.checkInvite(targetUserId, boardId);
-      if (inviteCheck.exists) {
-        throw new Error('An invitation has already been sent to this user');
-      }
-
-      await api.createNotification({
-        user_id: targetUserId,
-        type: 'board_invitation',
-        data: {
-          board_id: boardId,
-          board_name: boardName,
-          invited_by_id: user!.id,
-          invited_by_email: user!.email,
-        },
-      });
-    },
-    onSuccess: () => {
-      setSuccess(true);
-      setEmail('');
-      setError('');
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-    },
-    onError: (err: Error) => {
-      setError(err.message || 'Failed to send invitation. Please try again.');
-    },
-  });
+  const inviteMutation = useInviteMember();
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !user) return;
     setError('');
     setSuccess(false);
-    inviteMutation.mutate(email);
+    inviteMutation.mutate(
+      {
+        email,
+        boardId,
+        boardName,
+        inviterId: user.id,
+        inviterEmail: user.email,
+      },
+      {
+        onSuccess: () => {
+          setSuccess(true);
+          setEmail('');
+          setError('');
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        },
+        onError: (err: Error) => {
+          setError(err.message || 'Failed to send invitation. Please try again.');
+        },
+      }
+    );
   };
 
   return (

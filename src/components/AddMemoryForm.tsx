@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import * as api from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useCreateEntry } from '@/hooks/useCreateEntry';
 import Button from './Button';
 
 interface AddMemoryFormProps {
@@ -15,7 +13,6 @@ interface AddMemoryFormProps {
 
 export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemoryFormProps) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -28,37 +25,9 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
     };
   }, [previewUrls]);
 
-  const createMemoryMutation = useMutation({
-    mutationFn: async () => {
-      const entry = await api.createEntry(boardId, {
-        content: content.trim(),
-        location: location.trim() || undefined,
-      });
+  const createEntryMutation = useCreateEntry();
 
-      if (selectedFiles.length > 0) {
-        const photoUploads = selectedFiles.map((file, index) =>
-          api.uploadPhoto(entry.id, file, index)
-        );
-        await Promise.all(photoUploads);
-      }
-
-      return entry;
-    },
-    onSuccess: () => {
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
-      setContent('');
-      setLocation('');
-      setSelectedFiles([]);
-      setPreviewUrls([]);
-      queryClient.invalidateQueries({ queryKey: queryKeys.entries(boardId) });
-      onSuccess();
-    },
-    onError: () => {
-      setError('Failed to create memory. Please try again.');
-    },
-  });
-
-  const uploadingPhotos = createMemoryMutation.isPending && selectedFiles.length > 0;
+  const uploadingPhotos = createEntryMutation.isPending && selectedFiles.length > 0;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -118,7 +87,27 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
     e.preventDefault();
     if (!content.trim() || !user) return;
     setError('');
-    createMemoryMutation.mutate();
+    createEntryMutation.mutate(
+      {
+        boardId,
+        content: content.trim(),
+        location: location.trim() || undefined,
+        files: selectedFiles,
+      },
+      {
+        onSuccess: () => {
+          previewUrls.forEach(url => URL.revokeObjectURL(url));
+          setContent('');
+          setLocation('');
+          setSelectedFiles([]);
+          setPreviewUrls([]);
+          onSuccess();
+        },
+        onError: () => {
+          setError('Failed to create memory. Please try again.');
+        },
+      }
+    );
   };
 
   return (
@@ -292,11 +281,11 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
             </Button>
             <Button
               type="submit"
-              disabled={createMemoryMutation.isPending || !content.trim()}
+              disabled={createEntryMutation.isPending || !content.trim()}
               variant="primary"
               className="flex-1"
             >
-              {uploadingPhotos ? 'Uploading photos...' : createMemoryMutation.isPending ? 'Saving...' : 'Save Memory'}
+              {uploadingPhotos ? 'Uploading photos...' : createEntryMutation.isPending ? 'Saving...' : 'Save Memory'}
             </Button>
           </div>
         </form>

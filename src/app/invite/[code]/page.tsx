@@ -2,9 +2,10 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
+import { useJoinBoard } from '@/hooks/useJoinBoard';
 import Button from '@/components/Button';
 import type { BoardInfo } from '@/types';
 
@@ -32,12 +33,7 @@ export default function InvitePage() {
 
   const alreadyMember = memberCheck?.isMember ?? false;
 
-  const joinBoardMutation = useMutation({
-    mutationFn: () => api.joinBoard(board!.id, user!.id),
-    onSuccess: () => {
-      router.push(`/boards/${board!.id}`);
-    },
-  });
+  const joinBoardMutation = useJoinBoard();
 
   const loading = authLoading || boardLoading;
   const error = boardError?.message || (joinBoardMutation.error?.message ?? '');
@@ -136,7 +132,12 @@ export default function InvitePage() {
         ) : (
           <div className="space-y-3">
             <Button
-              onClick={() => joinBoardMutation.mutate()}
+              onClick={() =>
+                joinBoardMutation.mutate(
+                  { boardId: board!.id, userId: user!.id },
+                  { onSuccess: () => router.push(`/boards/${board!.id}`) }
+                )
+              }
               disabled={joinBoardMutation.isPending}
               variant="primary"
               className="w-full"
