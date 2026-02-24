@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/lib/api';
 import Button from './Button';
@@ -14,51 +15,32 @@ interface InviteMemberModalProps {
 export default function InviteMemberModal({ boardId, boardName, onClose }: InviteMemberModalProps) {
   const { user } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !user) return;
+  const inviteMutation = useMutation({
+    mutationFn: async (emailToInvite: string) => {
+      const emailLower = emailToInvite.toLowerCase().trim();
 
-    setLoading(true);
-    setError('');
-    setSuccess(false);
-
-    try {
-      const emailLower = email.toLowerCase().trim();
-
-      if (emailLower === user.email?.toLowerCase()) {
-        setError('You cannot invite yourself');
-        setLoading(false);
-        return;
+      if (emailLower === user?.email?.toLowerCase()) {
+        throw new Error('You cannot invite yourself');
       }
 
       const lookupData = await api.lookupByEmail(emailLower);
-
       if (!lookupData.exists) {
-        setError('No user found with this email. They need to sign up first.');
-        setLoading(false);
-        return;
+        throw new Error('No user found with this email. They need to sign up first.');
       }
 
       const targetUserId = lookupData.userId;
 
       const memberCheck = await api.checkIsMember(boardId, targetUserId);
-
       if (memberCheck.isMember) {
-        setError('This user is already a member of the board');
-        setLoading(false);
-        return;
+        throw new Error('This user is already a member of the board');
       }
 
       const inviteCheck = await api.checkInvite(targetUserId, boardId);
-
       if (inviteCheck.exists) {
-        setError('An invitation has already been sent to this user');
-        setLoading(false);
-        return;
+        throw new Error('An invitation has already been sent to this user');
       }
 
       await api.createNotification({
@@ -67,23 +49,30 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
         data: {
           board_id: boardId,
           board_name: boardName,
-          invited_by_id: user.id,
-          invited_by_email: user.email,
+          invited_by_id: user!.id,
+          invited_by_email: user!.email,
         },
       });
-
+    },
+    onSuccess: () => {
       setSuccess(true);
       setEmail('');
-
+      setError('');
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (err: any) {
-      console.error('Error sending invitation:', err);
+    },
+    onError: (err: Error) => {
       setError(err.message || 'Failed to send invitation. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !user) return;
+    setError('');
+    setSuccess(false);
+    inviteMutation.mutate(email);
   };
 
   return (
@@ -143,11 +132,11 @@ export default function InviteMemberModal({ boardId, boardName, onClose }: Invit
           <div className="flex space-x-3 pt-2">
             <Button
               type="submit"
-              disabled={loading || !email.trim() || success}
+              disabled={inviteMutation.isPending || !email.trim() || success}
               variant="primary"
               className="flex-1"
             >
-              {loading ? 'Sending...' : success ? 'Sent!' : 'Send Invitation'}
+              {inviteMutation.isPending ? 'Sending...' : success ? 'Sent!' : 'Send Invitation'}
             </Button>
             <Button
               type="button"

@@ -1,76 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import JournalEntry from '@/components/JournalEntry';
 import Spinner from '@/components/Spinner';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/Button';
 import type { Board, Entry } from '@/types';
+import { useEffect } from 'react';
 
 export default function BoardPage() {
   const { id } = useParams();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [board, setBoard] = useState<Board | null>(null);
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth');
-    } else if (user && id) {
-      loadBoardData();
-      loadUserBoards();
     }
-  }, [user, authLoading, id, router]);
+  }, [user, authLoading, router]);
 
-  const loadUserBoards = async () => {
-    try {
-      const data = await api.getBoards();
-      setBoards(data || []);
-    } catch (err) {
-      console.error('Error loading boards:', err);
-    }
-  };
+  const boardId = id as string;
 
-  const loadBoardData = async () => {
-    try {
-      const boardData = await api.getBoard(id as string);
+  const {
+    data: board,
+    isPending: boardLoading,
+    error: boardError,
+  } = useQuery<Board>({
+    queryKey: queryKeys.board(boardId),
+    queryFn: () => api.getBoard(boardId),
+    enabled: !!user && !!boardId,
+  });
 
-      setBoard({
-        id: boardData.id,
-        name: boardData.name,
-        description: boardData.description,
-        inviteCode: boardData.inviteCode,
-        role: boardData.role || 'member',
-        memberCount: boardData.memberCount || 0,
-      });
+  const { data: boards = [] } = useQuery<Board[]>({
+    queryKey: queryKeys.boards,
+    queryFn: api.getBoards,
+    enabled: !!user,
+  });
 
-      const entriesData = await api.getEntries(id as string);
-
-      const mapped: Entry[] = (entriesData || []).map((e: any) => ({
-        id: e.id,
-        content: e.content,
-        createdAt: e.createdAt,
-        location: e.location,
-        userId: e.userId,
-        createdByName: e.createdByName || 'Unknown',
-        photos: e.photos || [],
-      }));
-
-      setEntries(mapped);
-    } catch (err: any) {
-      console.error('Error loading board data:', err);
-      setError(err.message || 'Failed to load board data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: entries = [],
+    isPending: entriesLoading,
+  } = useQuery<Entry[]>({
+    queryKey: queryKeys.entries(boardId),
+    queryFn: () => api.getEntries(boardId),
+    enabled: !!user && !!boardId,
+  });
 
   const copyInviteLink = () => {
     if (board) {
@@ -79,15 +57,15 @@ export default function BoardPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading || boardLoading) {
     return <Spinner />;
   }
 
-  if (error || !board) {
+  if (boardError || !board) {
     return (
       <div className="text-center py-12">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          {error || 'Board not found'}
+          {boardError?.message || 'Board not found'}
         </h1>
         <Button
           onClick={() => router.push('/boards')}
@@ -149,7 +127,9 @@ export default function BoardPage() {
       </div>
 
       <div className="space-y-6">
-        {entries.length > 0 ? (
+        {entriesLoading ? (
+          <Spinner className="py-12" />
+        ) : entries.length > 0 ? (
           entries.map((entry) => (
             <JournalEntry
               key={entry.id}

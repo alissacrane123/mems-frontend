@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import Button from "@/components/Button";
 import type { Board } from "@/types";
 import { BoardList } from "@/components/boards/BoardList";
@@ -11,8 +13,8 @@ import { BoardList } from "@/components/boards/BoardList";
 export default function BoardsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [newBoard, setNewBoard] = useState({ name: "", description: "" });
@@ -22,69 +24,68 @@ export default function BoardsPage() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/auth");
-    } else if (user) {
-      loadBoards();
     }
   }, [user, authLoading, router]);
 
-  const loadBoards = async () => {
-    try {
-      const data = await api.getBoards();
-      setBoards(data || []);
-    } catch (err) {
-      console.error("Error loading boards:", err);
-      setError("Failed to load boards");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: boards = [],
+    isPending: loading,
+  } = useQuery<Board[]>({
+    queryKey: queryKeys.boards,
+    queryFn: api.getBoards,
+    enabled: !!user,
+  });
 
-  const createBoard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    try {
-      await api.createBoard({
-        name: newBoard.name,
-        description: newBoard.description || undefined,
-      });
+  const createBoardMutation = useMutation({
+    mutationFn: (data: { name: string; description?: string }) =>
+      api.createBoard(data),
+    onSuccess: () => {
       setNewBoard({ name: "", description: "" });
       setShowCreateForm(false);
-      loadBoards();
-    } catch (err) {
-      console.error("Error creating board:", err);
-      setError("Failed to create board");
-    }
-  };
+      setError("");
+      queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+    onError: (err: Error) => {
+      setError(err.message || "Failed to create board");
+    },
+  });
 
-  const joinBoard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    try {
-      const board = await api.getBoardByInviteCode(joinCode.trim());
-
+  const joinBoardMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const board = await api.getBoardByInviteCode(code.trim());
       if (!board || !board.id) {
-        setError("Invalid invite code");
-        return;
+        throw new Error("Invalid invite code");
       }
-
       const memberCheck = await api.checkIsMember(board.id, user!.id);
-
       if (memberCheck.isMember) {
-        setError("You are already a member of this board");
-        return;
+        throw new Error("You are already a member of this board");
       }
-
       await api.joinBoard(board.id, user!.id);
-
+    },
+    onSuccess: () => {
       setJoinCode("");
       setShowJoinForm(false);
-      loadBoards();
-    } catch (err: any) {
-      console.error("Error joining board:", err);
+      setError("");
+      queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+    onError: (err: Error) => {
       setError(err.message || "Failed to join board");
-    }
+    },
+  });
+
+  const handleCreateBoard = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    createBoardMutation.mutate({
+      name: newBoard.name,
+      description: newBoard.description || undefined,
+    });
+  };
+
+  const handleJoinBoard = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    joinBoardMutation.mutate(joinCode);
   };
 
   if (authLoading || loading) {
@@ -131,7 +132,7 @@ export default function BoardsPage() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Create New Board
             </h3>
-            <form onSubmit={createBoard} className="space-y-4">
+            <form onSubmit={handleCreateBoard} className="space-y-4">
               <div>
                 <label
                   htmlFor="boardName"
@@ -178,8 +179,13 @@ export default function BoardsPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary" className="flex-1">
-                  Create Board
+                <Button
+                  type="submit"
+                  disabled={createBoardMutation.isPending}
+                  variant="primary"
+                  className="flex-1"
+                >
+                  {createBoardMutation.isPending ? "Creating..." : "Create Board"}
                 </Button>
               </div>
             </form>
@@ -194,7 +200,7 @@ export default function BoardsPage() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Join Board
             </h3>
-            <form onSubmit={joinBoard} className="space-y-4">
+            <form onSubmit={handleJoinBoard} className="space-y-4">
               <div>
                 <label
                   htmlFor="inviteCode"
@@ -221,8 +227,13 @@ export default function BoardsPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary" className="flex-1">
-                  Join Board
+                <Button
+                  type="submit"
+                  disabled={joinBoardMutation.isPending}
+                  variant="primary"
+                  className="flex-1"
+                >
+                  {joinBoardMutation.isPending ? "Joining..." : "Join Board"}
                 </Button>
               </div>
             </form>

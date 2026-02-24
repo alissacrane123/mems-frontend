@@ -1,8 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
 import * as api from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface Notification {
   id: string;
@@ -38,93 +40,78 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const fetchNotifications = useCallback(async () => {
-    if (!user) {
-      setNotifications([]);
-      return;
-    }
+  const {
+    data: notifications = [],
+    isPending: loading,
+    refetch,
+  } = useQuery<Notification[]>({
+    queryKey: queryKeys.notifications,
+    queryFn: api.getNotifications,
+    enabled: !!user,
+  });
 
-    setLoading(true);
-    try {
-      const data = await api.getNotifications();
-      setNotifications(data || []);
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await api.markAsRead(notificationId);
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-      );
-    } catch (err) {
-      console.error('Error marking notification as read:', err);
-    }
+  const setReadOptimistic = (id?: string) => {
+    queryClient.setQueryData<Notification[]>(queryKeys.notifications, (old) =>
+      (old ?? []).map((n) =>
+        id ? (n.id === id ? { ...n, isRead: true } : n) : { ...n, isRead: true }
+      )
+    );
   };
 
-  const handleMarkAllAsRead = async () => {
-    if (!user) return;
+  const markAsReadMutation = useMutation({
+    mutationFn: (notificationId: string) => api.markAsRead(notificationId),
+    onMutate: (notificationId) => setReadOptimistic(notificationId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
+  });
 
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => api.markAllAsRead(),
+    onMutate: () => setReadOptimistic(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: ({ notificationId, boardId }: { notificationId: string; boardId: string }) =>
+      api.acceptInvite(notificationId, boardId),
+    onSuccess: (_, { notificationId }) => {
+      setReadOptimistic(notificationId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: (notificationId: string) => api.declineInvite(notificationId),
+    onMutate: (notificationId) => setReadOptimistic(notificationId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
+  });
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const handleAccept = async (notificationId: string, boardId: string) => {
     try {
-      await api.markAllAsRead();
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, isRead: true }))
-      );
-    } catch (err) {
-      console.error('Error marking all notifications as read:', err);
-    }
-  };
-
-  const acceptBoardInvitation = async (notificationId: string, boardId: string) => {
-    if (!user) return { success: false, error: 'Not authenticated' };
-
-    try {
-      await api.acceptInvite(notificationId, boardId);
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-      );
+      await acceptMutation.mutateAsync({ notificationId, boardId });
       return { success: true };
     } catch (err: any) {
-      console.error('Error accepting board invitation:', err);
       return { success: false, error: err.message || 'Failed to accept invitation' };
     }
   };
 
-  const declineBoardInvitation = async (notificationId: string) => {
-    try {
-      await api.declineInvite(notificationId);
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-      );
-    } catch (err) {
-      console.error('Error declining invitation:', err);
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   return (
-    <NotificationContext.Provider value={{
-      notifications,
-      unreadCount,
-      loading,
-      fetchNotifications,
-      markAsRead: handleMarkAsRead,
-      markAllAsRead: handleMarkAllAsRead,
-      acceptBoardInvitation,
-      declineBoardInvitation,
-    }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        loading,
+        fetchNotifications: async () => { await refetch(); },
+        markAsRead: markAsReadMutation.mutateAsync,
+        markAllAsRead: markAllAsReadMutation.mutateAsync,
+        acceptBoardInvitation: handleAccept,
+        declineBoardInvitation: declineMutation.mutateAsync,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );

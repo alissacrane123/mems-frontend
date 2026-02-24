@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import type { Board } from '@/types';
 
 interface UseBoardsOptions {
@@ -9,61 +11,42 @@ interface UseBoardsOptions {
 }
 
 export function useBoards({ autoSelect = true }: UseBoardsOptions = {}) {
-  const [boards, setBoards] = useState<Board[]>([]);
+  const queryClient = useQueryClient();
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchBoards = useCallback(async () => {
-    setError(null);
-    try {
-      const data = await api.getBoards();
-      const fetched: Board[] = (data || []).map((b: any) => ({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-        inviteCode: b.inviteCode ?? '',
-        role: b.role || 'member',
-        memberCount: b.memberCount ?? 0,
-        createdAt: b.createdAt,
-      }));
-      setBoards(fetched);
-      return fetched;
-    } catch (err: any) {
-      setError(err.message || 'Failed to load boards');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: boards = [],
+    isPending: loading,
+    error: queryError,
+  } = useQuery<Board[]>({
+    queryKey: queryKeys.boards,
+    queryFn: api.getBoards,
+  });
 
   useEffect(() => {
-    fetchBoards().then((fetched) => {
-      if (autoSelect && fetched.length > 0 && !selectedBoardId) {
-        setSelectedBoardId(fetched[0].id);
-      }
-    });
-  }, [fetchBoards, autoSelect]);
+    if (autoSelect && boards.length > 0 && !selectedBoardId) {
+      setSelectedBoardId(boards[0].id);
+    }
+  }, [autoSelect, boards, selectedBoardId]);
 
   const selectedBoard = boards.find((b) => b.id === selectedBoardId) ?? null;
 
-  const createBoard = useCallback(async (name: string) => {
-    const data = await api.createBoard({ name });
-    const fetched = await fetchBoards();
-    if (fetched.length > 0) {
+  const createBoardMutation = useMutation({
+    mutationFn: (name: string) => api.createBoard({ name }),
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.boards });
       setSelectedBoardId(data.id);
-    }
-    return data;
-  }, [fetchBoards]);
+    },
+  });
 
   return {
     boards,
     selectedBoard,
     selectedBoardId,
     setSelectedBoardId,
-    createBoard,
-    reload: fetchBoards,
+    createBoard: createBoardMutation.mutateAsync,
+    reload: () => queryClient.invalidateQueries({ queryKey: queryKeys.boards }),
     loading,
-    error,
+    error: queryError?.message ?? null,
   };
 }

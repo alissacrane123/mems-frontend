@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import Button from './Button';
 
 interface AddMemoryFormProps {
@@ -13,12 +15,11 @@ interface AddMemoryFormProps {
 
 export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemoryFormProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,6 +27,38 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
       previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
   }, [previewUrls]);
+
+  const createMemoryMutation = useMutation({
+    mutationFn: async () => {
+      const entry = await api.createEntry(boardId, {
+        content: content.trim(),
+        location: location.trim() || undefined,
+      });
+
+      if (selectedFiles.length > 0) {
+        const photoUploads = selectedFiles.map((file, index) =>
+          api.uploadPhoto(entry.id, file, index)
+        );
+        await Promise.all(photoUploads);
+      }
+
+      return entry;
+    },
+    onSuccess: () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      setContent('');
+      setLocation('');
+      setSelectedFiles([]);
+      setPreviewUrls([]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.entries(boardId) });
+      onSuccess();
+    },
+    onError: () => {
+      setError('Failed to create memory. Please try again.');
+    },
+  });
+
+  const uploadingPhotos = createMemoryMutation.isPending && selectedFiles.length > 0;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -81,43 +114,11 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || !user) return;
-
-    setLoading(true);
     setError('');
-
-    try {
-      const entry = await api.createEntry(boardId, {
-        content: content.trim(),
-        location: location.trim() || undefined,
-      });
-
-      if (selectedFiles.length > 0) {
-        setUploadingPhotos(true);
-
-        const photoUploads = selectedFiles.map((file, index) =>
-          api.uploadPhoto(entry.id, file, index)
-        );
-
-        await Promise.all(photoUploads);
-      }
-
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
-
-      setContent('');
-      setLocation('');
-      setSelectedFiles([]);
-      setPreviewUrls([]);
-      onSuccess();
-    } catch (err) {
-      console.error('Error creating entry:', err);
-      setError('Failed to create memory. Please try again.');
-    } finally {
-      setLoading(false);
-      setUploadingPhotos(false);
-    }
+    createMemoryMutation.mutate();
   };
 
   return (
@@ -291,11 +292,11 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
             </Button>
             <Button
               type="submit"
-              disabled={loading || !content.trim()}
+              disabled={createMemoryMutation.isPending || !content.trim()}
               variant="primary"
               className="flex-1"
             >
-              {uploadingPhotos ? 'Uploading photos...' : loading ? 'Saving...' : 'Save Memory'}
+              {uploadingPhotos ? 'Uploading photos...' : createMemoryMutation.isPending ? 'Saving...' : 'Save Memory'}
             </Button>
           </div>
         </form>

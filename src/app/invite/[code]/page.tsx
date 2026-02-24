@@ -1,85 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import * as api from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import Button from '@/components/Button';
-
-interface BoardInfo {
-  id: string;
-  name: string;
-  description: string | null;
-  memberCount: number;
-}
+import type { BoardInfo } from '@/types';
 
 export default function InvitePage() {
   const { code } = useParams();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [board, setBoard] = useState<BoardInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
-  const [error, setError] = useState('');
-  const [alreadyMember, setAlreadyMember] = useState(false);
+  const inviteCode = code as string;
 
-  useEffect(() => {
-    if (!authLoading) {
-      loadBoardInfo();
-    }
-  }, [authLoading, code]);
+  const {
+    data: board,
+    isPending: boardLoading,
+    error: boardError,
+  } = useQuery<BoardInfo>({
+    queryKey: queryKeys.boardByInvite(inviteCode),
+    queryFn: () => api.getBoardByInviteCode(inviteCode),
+    enabled: !authLoading,
+  });
 
-  const loadBoardInfo = async () => {
-    try {
-      const boardData = await api.getBoardByInviteCode(code as string);
+  const { data: memberCheck } = useQuery<{ isMember: boolean }>({
+    queryKey: queryKeys.memberCheck(board?.id ?? '', user?.id ?? ''),
+    queryFn: () => api.checkIsMember(board!.id, user!.id),
+    enabled: !!board?.id && !!user?.id,
+  });
 
-      if (!boardData || !boardData.id) {
-        setError('Invalid or expired invite link');
-        setLoading(false);
-        return;
-      }
+  const alreadyMember = memberCheck?.isMember ?? false;
 
-      setBoard({
-        id: boardData.id,
-        name: boardData.name,
-        description: boardData.description,
-        memberCount: boardData.memberCount || 0,
-      });
+  const joinBoardMutation = useMutation({
+    mutationFn: () => api.joinBoard(board!.id, user!.id),
+    onSuccess: () => {
+      router.push(`/boards/${board!.id}`);
+    },
+  });
 
-      if (user) {
-        try {
-          const memberCheck = await api.checkIsMember(boardData.id, user.id);
-          if (memberCheck.isMember) {
-            setAlreadyMember(true);
-          }
-        } catch {
-          // Not a member
-        }
-      }
-    } catch (err) {
-      console.error('Error loading board info:', err);
-      setError('Invalid or expired invite link');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const joinBoard = async () => {
-    if (!user || !board) return;
-
-    setJoining(true);
-    setError('');
-
-    try {
-      await api.joinBoard(board.id, user.id);
-      router.push(`/boards/${board.id}`);
-    } catch (err: any) {
-      console.error('Error joining board:', err);
-      setError(err.message || 'Failed to join board');
-    } finally {
-      setJoining(false);
-    }
-  };
+  const loading = authLoading || boardLoading;
+  const error = boardError?.message || (joinBoardMutation.error?.message ?? '');
 
   if (loading) {
     return (
@@ -89,7 +50,7 @@ export default function InvitePage() {
     );
   }
 
-  if (error || !board) {
+  if (boardError || !board) {
     return (
       <div className="max-w-md mx-auto mt-16 text-center">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
@@ -99,7 +60,7 @@ export default function InvitePage() {
             </svg>
           </div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            {error || 'Invite not found'}
+            {boardError?.message || 'Invite not found'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             This invite link may be invalid or expired.
@@ -175,12 +136,12 @@ export default function InvitePage() {
         ) : (
           <div className="space-y-3">
             <Button
-              onClick={joinBoard}
-              disabled={joining}
+              onClick={() => joinBoardMutation.mutate()}
+              disabled={joinBoardMutation.isPending}
               variant="primary"
               className="w-full"
             >
-              {joining ? 'Joining...' : 'Join Board'}
+              {joinBoardMutation.isPending ? 'Joining...' : 'Join Board'}
             </Button>
             <Button
               onClick={() => router.push('/')}

@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { QueryProvider } from "@/providers/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,16 +32,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200`}
       >
-        <AuthProvider>
-          <NotificationProvider>
-            <ThemeProvider>
-              <Header />
-              <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-                {children}
-              </main>
-            </ThemeProvider>
-          </NotificationProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <ThemeProvider>
+                <Header />
+                <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+                  {children}
+                </main>
+              </ThemeProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );
