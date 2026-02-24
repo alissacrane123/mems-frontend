@@ -4,3 +4,50 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+div[contenteditable] ul {
+  list-style-type: disc !important;
+  padding-left: 1.25rem !important;
+}
+
+div[contenteditable] ol {
+  list-style-type: decimal !important;
+  padding-left: 1.25rem !important;
+}
+
+div[contenteditable] input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1.5px solid #d1d5db;
+  background: transparent;
+  cursor: pointer;
+  margin-right: 6px;
+  vertical-align: middle;
+  position: relative;
+  flex-shrink: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  div[contenteditable] input[type="checkbox"] {
+    border-color: #4b5563;
+  }
+}
+
+div[contenteditable] input[type="checkbox"]:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+div[contenteditable] input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
