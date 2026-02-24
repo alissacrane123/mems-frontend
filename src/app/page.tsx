@@ -1,42 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBoards } from "@/hooks/useBoards";
-import { useEntries } from "@/hooks/useEntries";
-import JournalEntry from "@/components/JournalEntry";
-import AddMemoryForm from "@/components/AddMemoryForm";
-import InviteMemberModal from "@/components/InviteMemberModal";
-import CreateBoardModal from "@/components/CreateBoardModal";
-import EmptyState from "@/components/EmptyState";
-import Spinner from "@/components/Spinner";
+import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
+import { BoardList } from "@/components/boards/BoardList";
+import { JoinBoardForm } from "@/components/boards/JoinBoardForm";
+import { CreateBoardForm } from "@/components/boards/CreateBoardForm";
 
-export default function Home() {
+export default function BoardsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const {
-    boards,
-    selectedBoard,
-    selectedBoardId,
-    setSelectedBoardId,
-    createBoard,
-    loading: boardsLoading,
-    error: boardsError,
-  } = useBoards();
-
-  const {
-    entries,
-    loading: entriesLoading,
-    error: entriesError,
-    reload: reloadEntries,
-  } = useEntries(selectedBoardId);
-
-  const [showCreateBoard, setShowCreateBoard] = useState(false);
-  const [showAddMemory, setShowAddMemory] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -44,162 +22,52 @@ export default function Home() {
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || boardsLoading) return <Spinner />;
   if (!user) return null;
-
-  const error = boardsError || entriesError;
-
-  if (boards.length === 0) {
-    return (
-      <>
-        <div className="text-center py-12">
-          <div className="max-w-md mx-auto">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400 mb-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2h12a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"
-              />
-            </svg>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Welcome to Mems!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create your first family board to start capturing precious memories.
-            </p>
-            <Button onClick={() => setShowCreateBoard(true)} variant="primary" size="lg">
-              Create Your First Board
-            </Button>
-          </div>
-        </div>
-
-        <CreateBoardModal
-          open={showCreateBoard}
-          onClose={() => setShowCreateBoard(false)}
-          onCreated={async (name) => {
-            await createBoard(name);
-            setShowCreateBoard(false);
-          }}
-        />
-      </>
-    );
-  }
 
   return (
     <div className="space-y-8">
-      {error && (
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-        </div>
-      )}
-
-      {/* Board Selector + Actions */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <select
-              value={selectedBoardId || ""}
-              onChange={(e) => setSelectedBoardId(e.target.value)}
-              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {boards.map((board) => (
-                <option key={board.id} value={board.id}>
-                  {board.name}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-          {selectedBoard && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              <span className="capitalize">{selectedBoard.role}</span> •{" "}
-              {entries.length} memories
-            </div>
-          )}
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            Family Boards
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your family memory boards and collaborations
+          </p>
         </div>
         <div className="flex space-x-3">
-          <Button onClick={() => setShowCreateBoard(true)} variant="ghost">
-            New Board
+          <Button onClick={() => setShowJoinForm(true)} variant="ghost">
+            Join Board
           </Button>
-          <Button onClick={() => setShowInviteModal(true)} disabled={!selectedBoardId} variant="secondary">
-            Invite Members
-          </Button>
-          <Button onClick={() => setShowAddMemory(true)} disabled={!selectedBoardId} variant="primary">
-            Add Memory
+          <Button onClick={() => setShowCreateForm(true)} variant="primary">
+            Create Board
           </Button>
         </div>
       </div>
 
-      {/* Entries */}
-      {entriesLoading ? (
-        <Spinner className="py-12" />
-      ) : entries.length > 0 ? (
-        <div className="space-y-6">
-          {entries.map((entry) => (
-            <JournalEntry
-              key={entry.id}
-              entry={entry}
-              isOwnPost={entry.userId === user.id}
-            />
-          ))}
+      {error && (
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+          <div className="text-sm text-red-700 dark:text-red-400">{error}</div>
         </div>
-      ) : (
-        selectedBoardId && (
-          <EmptyState
-            icon={
-              <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            }
-            title="No memories yet"
-            description={`Start capturing precious moments for ${selectedBoard?.name}.`}
-            action={
-              <Button onClick={() => setShowAddMemory(true)} variant="primary">
-                Add Your First Memory
-              </Button>
-            }
-          />
-        )
       )}
 
-      {/* Modals */}
-      <CreateBoardModal
-        open={showCreateBoard}
-        onClose={() => setShowCreateBoard(false)}
-        onCreated={async (name) => {
-          await createBoard(name);
-          setShowCreateBoard(false);
-        }}
-      />
-
-      {showInviteModal && selectedBoard && (
-        <InviteMemberModal
-          boardId={selectedBoard.id}
-          boardName={selectedBoard.name}
-          onClose={() => setShowInviteModal(false)}
+      {/* Create Board Form */}
+      {showCreateForm && (
+        <CreateBoardForm
+          onClose={() => setShowCreateForm(false)}
+          onError={setError}
         />
       )}
 
-      {showAddMemory && selectedBoardId && (
-        <AddMemoryForm
-          boardId={selectedBoardId}
-          onSuccess={() => {
-            setShowAddMemory(false);
-            reloadEntries();
-          }}
-          onCancel={() => setShowAddMemory(false)}
+      {/* Join Board Form */}
+      {showJoinForm && (
+        <JoinBoardForm
+          onClose={() => setShowJoinForm(false)}
+          onError={setError}
         />
       )}
+
+      <BoardList />
     </div>
   );
 }

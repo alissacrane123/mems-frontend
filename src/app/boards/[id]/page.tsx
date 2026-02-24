@@ -1,143 +1,160 @@
-'use client';
+"use client";
 
-import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import * as api from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
-import JournalEntry from '@/components/JournalEntry';
-import Spinner from '@/components/Spinner';
-import EmptyState from '@/components/EmptyState';
-import Button from '@/components/Button';
-import type { Board, Entry } from '@/types';
-import { useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBoards } from "@/hooks/useBoards";
+import { useEntries } from "@/hooks/useEntries";
+import JournalEntry from "@/components/JournalEntry";
+import AddMemoryForm from "@/components/AddMemoryForm";
+import InviteMemberModal from "@/components/InviteMemberModal";
+import CreateBoardModal from "@/components/CreateBoardModal";
+import EmptyState from "@/components/EmptyState";
+import Spinner from "@/components/Spinner";
+import Button from "@/components/Button";
 
-export default function BoardPage() {
-  const { id } = useParams();
+export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
+  const {
+    boards,
+    selectedBoard,
+    selectedBoardId,
+    setSelectedBoardId,
+    createBoard,
+    loading: boardsLoading,
+    error: boardsError,
+  } = useBoards();
+
+  const {
+    entries,
+    loading: entriesLoading,
+    error: entriesError,
+    reload: reloadEntries,
+  } = useEntries(selectedBoardId);
+
+  const [showCreateBoard, setShowCreateBoard] = useState(false);
+  const [showAddMemory, setShowAddMemory] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/auth');
+      router.push("/auth");
     }
   }, [user, authLoading, router]);
 
-  const boardId = id as string;
+  if (authLoading || boardsLoading) return <Spinner />;
+  if (!user) return null;
 
-  const {
-    data: board,
-    isPending: boardLoading,
-    error: boardError,
-  } = useQuery<Board>({
-    queryKey: queryKeys.board(boardId),
-    queryFn: () => api.getBoard(boardId),
-    enabled: !!user && !!boardId,
-  });
+  const error = boardsError || entriesError;
 
-  const { data: boards = [] } = useQuery<Board[]>({
-    queryKey: queryKeys.boards,
-    queryFn: api.getBoards,
-    enabled: !!user,
-  });
-
-  const {
-    data: entries = [],
-    isPending: entriesLoading,
-  } = useQuery<Entry[]>({
-    queryKey: queryKeys.entries(boardId),
-    queryFn: () => api.getEntries(boardId),
-    enabled: !!user && !!boardId,
-  });
-
-  const copyInviteLink = () => {
-    if (board) {
-      const inviteUrl = `${window.location.origin}/invite/${board.inviteCode}`;
-      navigator.clipboard.writeText(inviteUrl);
-    }
-  };
-
-  if (authLoading || boardLoading) {
-    return <Spinner />;
-  }
-
-  if (boardError || !board) {
+  if (boards.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          {boardError?.message || 'Board not found'}
-        </h1>
-        <Button
-          onClick={() => router.push('/boards')}
-          variant="ghost"
-        >
-          ← Back to Boards
-        </Button>
-      </div>
+      <>
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400 mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2h12a2 2 0 012 2v2M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"
+              />
+            </svg>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Welcome to Mems!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Create your first family board to start capturing precious memories.
+            </p>
+            <Button onClick={() => setShowCreateBoard(true)} variant="primary" size="lg">
+              Create Your First Board
+            </Button>
+          </div>
+        </div>
+
+        <CreateBoardModal
+          open={showCreateBoard}
+          onClose={() => setShowCreateBoard(false)}
+          onCreated={async (name) => {
+            await createBoard(name);
+            setShowCreateBoard(false);
+          }}
+        />
+      </>
     );
   }
 
-  if (!user) return null;
-
   return (
     <div className="space-y-8">
+      {error && (
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+        </div>
+      )}
+
+      {/* Board Selector + Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="relative">
             <select
-              value={id || ""}
-              onChange={(e) => router.push(`/boards/${e.target.value}`)}
-              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              value={selectedBoardId || ""}
+              onChange={(e) => setSelectedBoardId(e.target.value)}
+              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              {boards.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
                 </option>
               ))}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg
-                className="h-4 w-4 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            <span className="capitalize">{board.role}</span> •{" "}
-            {entries.length} memories
-          </div>
+          {selectedBoard && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="capitalize">{selectedBoard.role}</span> •{" "}
+              {entries.length} memories
+            </div>
+          )}
         </div>
         <div className="flex space-x-3">
-          <Button
-            onClick={copyInviteLink}
-            variant="ghost"
-          >
-            Copy Invite Link
+          <Button onClick={() => setShowCreateBoard(true)} variant="ghost">
+            New Board
+          </Button>
+          <Button onClick={() => setShowInviteModal(true)} disabled={!selectedBoardId} variant="secondary">
+            Invite Members
+          </Button>
+          <Button onClick={() => setShowAddMemory(true)} disabled={!selectedBoardId} variant="primary">
+            Add Memory
           </Button>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {entriesLoading ? (
-          <Spinner className="py-12" />
-        ) : entries.length > 0 ? (
-          entries.map((entry) => (
+      {/* Entries */}
+      {entriesLoading ? (
+        <Spinner className="py-12" />
+      ) : entries.length > 0 ? (
+        <div className="space-y-6">
+          {entries.map((entry) => (
             <JournalEntry
               key={entry.id}
               entry={entry}
-              isOwnPost={entry.userId === user?.id}
+              isOwnPost={entry.userId === user.id}
             />
-          ))
-        ) : (
+          ))}
+        </div>
+      ) : (
+        selectedBoardId && (
           <EmptyState
             icon={
               <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,10 +162,44 @@ export default function BoardPage() {
               </svg>
             }
             title="No memories yet"
-            description="Start capturing precious moments for this board."
+            description={`Start capturing precious moments for ${selectedBoard?.name}.`}
+            action={
+              <Button onClick={() => setShowAddMemory(true)} variant="primary">
+                Add Your First Memory
+              </Button>
+            }
           />
-        )}
-      </div>
+        )
+      )}
+
+      {/* Modals */}
+      <CreateBoardModal
+        open={showCreateBoard}
+        onClose={() => setShowCreateBoard(false)}
+        onCreated={async (name) => {
+          await createBoard(name);
+          setShowCreateBoard(false);
+        }}
+      />
+
+      {showInviteModal && selectedBoard && (
+        <InviteMemberModal
+          boardId={selectedBoard.id}
+          boardName={selectedBoard.name}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
+
+      {showAddMemory && selectedBoardId && (
+        <AddMemoryForm
+          boardId={selectedBoardId}
+          onSuccess={() => {
+            setShowAddMemory(false);
+            reloadEntries();
+          }}
+          onCancel={() => setShowAddMemory(false)}
+        />
+      )}
     </div>
   );
 }
