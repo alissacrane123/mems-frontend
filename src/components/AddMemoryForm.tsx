@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateEntry } from '@/hooks/useCreateEntry';
 import Button from './Button';
+import DatePicker from './DatePicker';
 
 interface AddMemoryFormProps {
   boardId: string;
@@ -18,6 +19,7 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [date, setDate] = useState(new Date());
 
   useEffect(() => {
     return () => {
@@ -92,6 +94,7 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
         boardId,
         content: content.trim(),
         location: location.trim() || undefined,
+        createdAt: date.toISOString(),
         files: selectedFiles,
       },
       {
@@ -248,25 +251,12 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
             )}
           </div>
 
-          {/* Auto-captured info */}
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-              Automatically captured:
-            </h4>
-            <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-              <div className="flex items-center space-x-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V7a2 2 0 012-2h4a2 2 0 012 2v0M8 7v13a2 2 0 002 2h4a2 2 0 002-2V7M8 7H6a2 2 0 00-2 2v13a2 2 0 002 2h2m0 0h6" />
-                </svg>
-                <span>Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Time: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-              </div>
-            </div>
+          {/* Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              When did this happen?
+            </label>
+            <DatePicker value={date} onChange={setDate} />
           </div>
 
           {/* Actions */}

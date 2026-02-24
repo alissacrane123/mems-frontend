@@ -117,7 +117,7 @@ export const checkIsMember = (boardId: string, userId: string) =>
 export const getEntries = (boardId: string) =>
   apiFetch(`/api/boards/${boardId}/entries`);
 
-export const createEntry = (boardId: string, data: { content: string; location?: string }) =>
+export const createEntry = (boardId: string, data: { content: string; location?: string; createdAt?: string }) =>
   apiFetch(`/api/boards/${boardId}/entries`, { method: "POST", body: JSON.stringify(data) });
 
 // Photos

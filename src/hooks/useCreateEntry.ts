@@ -6,6 +6,7 @@ interface CreateEntryInput {
   boardId: string;
   content: string;
   location?: string;
+  createdAt?: string;
   files: File[];
 }
 
@@ -13,10 +14,11 @@ export function useCreateEntry() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ boardId, content, location, files }: CreateEntryInput) => {
+    mutationFn: async ({ boardId, content, location, createdAt, files }: CreateEntryInput) => {
       const entry = await api.createEntry(boardId, {
         content,
         location,
+        createdAt,
       });
 
       if (files.length > 0) {

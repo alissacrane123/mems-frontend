@@ -12,10 +12,13 @@ export function useAutoSave({ onSave }: UseAutoSaveOptions) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirty = useRef(false);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
   const flush = useCallback(async () => {
+    if (!dirty.current) return;
+    dirty.current = false;
     setSaving(true);
     try {
       await onSaveRef.current();
@@ -28,6 +31,7 @@ export function useAutoSave({ onSave }: UseAutoSaveOptions) {
   }, []);
 
   const trigger = useCallback(() => {
+    dirty.current = true;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, DEBOUNCE_MS);
   }, [flush]);

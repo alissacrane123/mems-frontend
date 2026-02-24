@@ -12,10 +12,6 @@ export function NoteItem({ note }: NoteItemProps) {
   const router = useRouter();
   const deleteNoteMutation = useDeleteNote();
 
-  const preview = note.content
-    ? note.content.slice(0, 120).replace(/\n/g, ' ')
-    : 'Empty note';
-
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm('Delete this note?')) return;
@@ -39,9 +35,6 @@ export function NoteItem({ note }: NoteItemProps) {
           <TrashIcon />
         </button>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
-        {preview}
-      </p>
       <p className="text-xs text-gray-400 dark:text-gray-500">
         {formatDate(note.updatedAt)}
       </p>

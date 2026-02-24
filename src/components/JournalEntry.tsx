@@ -1,4 +1,4 @@
-import { formatDate, formatTime } from '@/lib/format';
+import { formatDate, formatTime, parseDateParts } from '@/lib/format';
 import type { Entry } from '@/types';
 
 interface JournalEntryProps {
@@ -10,6 +10,9 @@ export default function JournalEntry({ entry, isOwnPost }: JournalEntryProps) {
   const { content, createdAt, location, photos = [], createdByName } = entry;
   const date = formatDate(createdAt);
   const time = formatTime(createdAt);
+  const { month, day, year } = parseDateParts(createdAt); 
+
+  console.log({ entry});
 
   return (
     <div className={`flex ${isOwnPost ? 'justify-end' : 'justify-start'} mb-6`}>
