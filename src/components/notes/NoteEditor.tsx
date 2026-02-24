@@ -109,7 +109,6 @@ export default function NoteEditor({
         onKeyDown={handleKeyDown}
         data-placeholder="Start writing..."
         className="flex-1 w-full text-base text-gray-800 dark:text-gray-200 bg-transparent outline-none leading-relaxed min-h-[60vh] prose prose-sm dark:prose-invert max-w-none
-          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
           empty:before:content-[attr(data-placeholder)] empty:before:text-gray-300 dark:empty:before:text-gray-600 empty:before:pointer-events-none"
       />
     </>

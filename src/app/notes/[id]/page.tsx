@@ -10,6 +10,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import type { Note } from "@/types";
 import Spinner from "@/components/Spinner";
 import NoteEditor from "@/components/notes/NoteEditor";
+import { ChevronLeftIcon } from "@/components/icons";
 
 export default function NoteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,19 +86,7 @@ export default function NoteEditorPage() {
           onClick={() => router.push("/notes")}
           className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer"
         >
-          <svg
-            className="h-4 w-4 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeftIcon className="h-4 w-4 mr-1" />
           Notes
         </button>
         <span className="text-xs text-gray-400 dark:text-gray-500">
