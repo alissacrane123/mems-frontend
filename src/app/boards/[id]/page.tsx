@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBoards } from "@/hooks/useBoards";
 import { useEntries } from "@/hooks/useEntries";
@@ -12,16 +12,17 @@ import CreateBoardModal from "@/components/CreateBoardModal";
 import EmptyState from "@/components/EmptyState";
 import Spinner from "@/components/Spinner";
 import Button from "@/components/Button";
+import { useGetBoard } from "@/hooks/useGetBoard";
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+
+  const { board, loading, error: boardError } = useGetBoard(id);
 
   const {
     boards,
-    selectedBoard,
-    selectedBoardId,
-    setSelectedBoardId,
     createBoard,
     loading: boardsLoading,
     error: boardsError,
@@ -32,7 +33,7 @@ export default function Home() {
     loading: entriesLoading,
     error: entriesError,
     reload: reloadEntries,
-  } = useEntries(selectedBoardId);
+  } = useEntries(id);
 
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [showAddMemory, setShowAddMemory] = useState(false);
@@ -47,9 +48,11 @@ export default function Home() {
   if (authLoading || boardsLoading) return <Spinner />;
   if (!user) return null;
 
-  const error = boardsError || entriesError;
+  const error = boardError || entriesError || boardsError;
 
-  if (boards.length === 0) {
+  if (loading) return <Spinner />;
+
+  if (!board && !loading) {
     return (
       <>
         <div className="text-center py-12">
@@ -70,23 +73,16 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Welcome to Mems!
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create your first family board to start capturing precious memories.
-            </p>
-            <Button onClick={() => setShowCreateBoard(true)} variant="primary" size="lg">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">sorry</p>
+            <Button
+              onClick={() => setShowCreateBoard(true)}
+              variant="primary"
+              size="lg"
+            >
               Create Your First Board
             </Button>
           </div>
         </div>
-
-        <CreateBoardModal
-          open={showCreateBoard}
-          onClose={() => setShowCreateBoard(false)}
-          onCreated={async (name) => {
-            await createBoard(name);
-            setShowCreateBoard(false);
-          }}
-        />
       </>
     );
   }
@@ -104,8 +100,8 @@ export default function Home() {
         <div className="flex items-center space-x-4">
           <div className="relative">
             <select
-              value={selectedBoardId || ""}
-              onChange={(e) => setSelectedBoardId(e.target.value)}
+              value={board?.id || ""}
+              onChange={(e) => router.push(`/boards/${e.target.value}`)}
               className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {boards.map((board) => (
@@ -115,14 +111,24 @@ export default function Home() {
               ))}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <svg
+                className="h-4 w-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </div>
           </div>
-          {selectedBoard && (
+          {board && (
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              <span className="capitalize">{selectedBoard.role}</span> •{" "}
+              <span className="capitalize">{board.role}</span> •{" "}
               {entries.length} memories
             </div>
           )}
@@ -131,10 +137,18 @@ export default function Home() {
           <Button onClick={() => setShowCreateBoard(true)} variant="ghost">
             New Board
           </Button>
-          <Button onClick={() => setShowInviteModal(true)} disabled={!selectedBoardId} variant="secondary">
+          <Button
+            onClick={() => setShowInviteModal(true)}
+            disabled={!board?.id}
+            variant="secondary"
+          >
             Invite Members
           </Button>
-          <Button onClick={() => setShowAddMemory(true)} disabled={!selectedBoardId} variant="primary">
+          <Button
+            onClick={() => setShowAddMemory(true)}
+            disabled={!board?.id}
+            variant="primary"
+          >
             Add Memory
           </Button>
         </div>
@@ -154,15 +168,25 @@ export default function Home() {
           ))}
         </div>
       ) : (
-        selectedBoardId && (
+        board?.id && (
           <EmptyState
             icon={
-              <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             }
             title="No memories yet"
-            description={`Start capturing precious moments for ${selectedBoard?.name}.`}
+            description={`Start capturing precious moments for ${board?.name}.`}
             action={
               <Button onClick={() => setShowAddMemory(true)} variant="primary">
                 Add Your First Memory
@@ -182,17 +206,17 @@ export default function Home() {
         }}
       />
 
-      {showInviteModal && selectedBoard && (
+      {showInviteModal && board && (
         <InviteMemberModal
-          boardId={selectedBoard.id}
-          boardName={selectedBoard.name}
+          boardId={board.id}
+          boardName={board.name}
           onClose={() => setShowInviteModal(false)}
         />
       )}
 
-      {showAddMemory && selectedBoardId && (
+      {showAddMemory && board?.id && (
         <AddMemoryForm
-          boardId={selectedBoardId}
+          boardId={board?.id}
           onSuccess={() => {
             setShowAddMemory(false);
             reloadEntries();

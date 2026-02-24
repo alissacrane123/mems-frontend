@@ -50,24 +50,59 @@ export function placeCursorAtEnd(node: Node) {
  * so that innerHTML serialization preserves it.
  */
 export function serializeCheckboxes(container: HTMLElement) {
-  container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
-    if (cb.checked) {
-      cb.setAttribute("checked", "checked");
-    } else {
-      cb.removeAttribute("checked");
-    }
-  });
+  container
+    .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    .forEach((cb) => {
+      if (cb.checked) {
+        cb.setAttribute("checked", "checked");
+      } else {
+        cb.removeAttribute("checked");
+      }
+    });
 }
 
 /** Walk up the DOM from `node` to find the nearest block-level parent inside `root`. */
 function findBlock(node: Node | null, root: HTMLElement): HTMLElement | null {
-  let current = node instanceof HTMLElement ? node : node?.parentElement ?? null;
+  let current =
+    node instanceof HTMLElement ? node : (node?.parentElement ?? null);
   while (current && current !== root) {
     const tag = current.tagName;
     if (tag === "DIV" || tag === "P" || tag === "LI") return current;
     current = current.parentElement;
   }
   return null;
+}
+
+/**
+ * Handle Backspace on an empty checkbox line — removes the whole line.
+ * Returns true if the event was handled (caller should preventDefault).
+ */
+export function handleCheckboxBackspace(
+  editorEl: HTMLElement,
+  onDirty: () => void,
+): boolean {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+
+  const block = findBlock(selection.anchorNode, editorEl);
+  if (!block) return false;
+  if (!block.querySelector('input[type="checkbox"]')) return false;
+
+  const text = block.textContent?.replace(/\u00A0/g, "").trim();
+  if (text) return false;
+
+  // Empty checkbox line → replace with a plain empty line
+  const empty = document.createElement("div");
+  empty.appendChild(document.createElement("br"));
+  block.replaceWith(empty);
+
+  const range = document.createRange();
+  range.setStart(empty, 0);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  onDirty();
+  return true;
 }
 
 /**

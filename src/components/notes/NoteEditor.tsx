@@ -7,6 +7,7 @@ import {
   placeCursorAtEnd,
   serializeCheckboxes,
   handleCheckboxEnter,
+  handleCheckboxBackspace,
 } from "@/lib/checkboxUtils";
 
 interface NoteEditorProps {
@@ -22,7 +23,9 @@ export default function NoteEditor({
   getContentRef,
 }: NoteEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+  const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>(
+    {},
+  );
   const initializedRef = useRef(false);
 
   // Hydrate the editor once
@@ -85,10 +88,15 @@ export default function NoteEditor({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key !== "Enter") return;
       if (!editorRef.current) return;
-      if (handleCheckboxEnter(editorRef.current, onDirty)) {
-        e.preventDefault();
+      if (e.key === "Enter") {
+        if (handleCheckboxEnter(editorRef.current, onDirty)) {
+          e.preventDefault();
+        }
+      } else if (e.key === "Backspace") {
+        if (handleCheckboxBackspace(editorRef.current, onDirty)) {
+          e.preventDefault();
+        }
       }
     },
     [onDirty],

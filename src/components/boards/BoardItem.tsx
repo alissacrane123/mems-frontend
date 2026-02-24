@@ -1,6 +1,6 @@
-import type { Board } from '@/types';
-import Button from '../Button';
-import { useRouter } from 'next/navigation';
+import type { Board } from "@/types";
+import Button from "../Button";
+import { useRouter } from "next/navigation";
 
 type BoardItemProps = {
   board: Board;
