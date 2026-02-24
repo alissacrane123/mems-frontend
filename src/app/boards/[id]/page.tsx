@@ -12,6 +12,7 @@ import CreateBoardModal from "@/components/CreateBoardModal";
 import EmptyState from "@/components/EmptyState";
 import Spinner from "@/components/Spinner";
 import Button from "@/components/Button";
+import Timeline from "@/components/Timeline";
 import { useGetBoard } from "@/hooks/useGetBoard";
 
 export default function Home() {
@@ -154,18 +155,28 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Timeline */}
+      {!entriesLoading && entries.length > 0 && (
+        <Timeline entries={entries} />
+      )}
+
       {/* Entries */}
       {entriesLoading ? (
         <Spinner className="py-12" />
       ) : entries.length > 0 ? (
         <div className="space-y-6">
-          {entries.map((entry) => (
-            <JournalEntry
-              key={entry.id}
-              entry={entry}
-              isOwnPost={entry.userId === user.id}
-            />
-          ))}
+          {entries.map((entry) => {
+            const d = new Date(entry.createdAt);
+            const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+            return (
+              <div key={entry.id} data-entry-month={monthKey}>
+                <JournalEntry
+                  entry={entry}
+                  isOwnPost={entry.userId === user.id}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : (
         board?.id && (

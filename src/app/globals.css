@@ -5,6 +5,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 div[contenteditable] ul {
   list-style-type: disc !important;
   padding-left: 1.25rem !important;
