@@ -42,6 +42,32 @@ export function CheckCircleIcon({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function CloseIcon({ className = "h-3.5 w-3.5" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+export function NotepadIcon({ className = "w-11 h-11" }: IconProps) {
+  return (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v4m4-4v4m4-4v4" />
+      <rect width="16" height="18" x="4" y="4" rx="2" />
+      <path d="M8 10h6m-6 4h8m-8 4h5" />
+    </svg>
+  );
+}
+
+export function FolderIcon({ className = "w-11 h-11" }: IconProps) {
+  return (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+      <path fill="none" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </svg>
+  );
+}
+
 export function PencilIcon({ className = "mx-auto h-12 w-12 text-gray-400" }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">

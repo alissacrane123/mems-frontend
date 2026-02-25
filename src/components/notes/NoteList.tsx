@@ -13,31 +13,41 @@ interface NoteListProps {
   folderId?: string | null;
 }
 
+function FolderAndNoteGrid({ folders, notes }: { folders: Folder[]; notes: Note[] }) {
+  if (folders.length === 0 && notes.length === 0) return <NoteNux />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {folders.length > 0 && (
+        <div className="flex flex-wrap gap-4 pb-4">
+          {folders.map((f: Folder) => (
+            <FolderItem key={f.id} folder={f} />
+          ))}
+        </div>
+      )}
+      {folders.length > 0 && notes.length > 0 && (
+        <div className="mx-4 w-full flex">
+          <div className="w-full h-full border-b border-gray-200 dark:border-gray-700" />
+        </div>
+      )}
+      {notes.length > 0 && (
+        <div className="flex flex-wrap gap-4">
+          {notes.map((note: Note) => (
+            <NoteItem key={note.id} note={note} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RootNoteList() {
   const { notes, loading: notesLoading } = useNotes();
   const { folders, loading: foldersLoading } = useFolders();
 
   if (notesLoading || foldersLoading) return <Spinner />;
 
-  if (folders.length === 0 && notes.length === 0) return <NoteNux />;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4 pb-4">
-        {folders.map((f: Folder) => (
-          <FolderItem key={f.id} folder={f} />
-        ))}
-      </div>
-      <div className="mx-4 w-full flex">
-        <div className="w-full h-full border-b border-gray-200 dark:border-gray-700"/>
-      </div>
-      <div className="flex flex-wrap gap-4">
-        {notes.map((note: Note) => (
-          <NoteItem key={note.id} note={note} />
-        ))}
-      </div>
-    </div>
-  );
+  return <FolderAndNoteGrid folders={folders} notes={notes} />;
 }
 
 function FolderNoteList({ folderId }: { folderId: string }) {
@@ -48,25 +58,7 @@ function FolderNoteList({ folderId }: { folderId: string }) {
   const subfolders: Folder[] = (folder as any)?.subfolders ?? [];
   const notes: Note[] = (folder as any)?.notes ?? [];
 
-  if (subfolders.length === 0 && notes.length === 0) return <NoteNux />;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
-        {subfolders.map((f: Folder) => (
-          <FolderItem key={f.id} folder={f} />
-        ))}
-      </div>
-      <div className="mx-4 w-full">
-        <div className="w-full h-full bg-gray-200 dark:bg-gray-700"/>
-      </div>
-      <div className="flex flex-wrap gap-4">
-        {notes.map((note: Note) => (
-          <NoteItem key={note.id} note={note} />
-        ))}
-      </div>
-    </div>
-  );
+  return <FolderAndNoteGrid folders={subfolders} notes={notes} />;
 }
 
 export function NoteList({ folderId }: NoteListProps = {}) {
