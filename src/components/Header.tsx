@@ -45,9 +45,6 @@ export default function Header() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg dark:bg-blue-900/20 text-white font-bold text-lg">
-                FM
-              </div>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Mems
               </h1>
@@ -75,7 +72,7 @@ export default function Header() {
             {user && (
               <nav className="flex items-center space-x-4">
                 <button
-                  onClick={() => router.push("/")}
+                  onClick={() => router.push("/boards")}
                   className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-pointer"
                 >
                   Boards

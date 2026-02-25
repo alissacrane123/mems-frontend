@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as api from '@/lib/api';
 
 export interface AppUser {
@@ -21,6 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.signout();
       setUser(null);
+      queryClient.clear();
       return { error: null };
     } catch (err: any) {
       return { error: { message: err.message || 'Sign out failed' } };

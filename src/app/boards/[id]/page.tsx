@@ -223,6 +223,7 @@ export default function Home() {
           boardId={board.id}
           boardName={board.name}
           onClose={() => setShowInviteModal(false)}
+          inviteCode={board.inviteCode}
         />
       )}
 
