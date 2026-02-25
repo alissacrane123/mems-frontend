@@ -1,8 +1,11 @@
 "use client";
 
+import { useCallback } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { useFolders } from "@/hooks/useFolders";
 import { useFolder } from "@/hooks/useFolder";
+import { useUpdateNote } from "@/hooks/useUpdateNote";
+import { useUpdateFolder } from "@/hooks/useUpdateFolder";
 import type { Note, Folder } from "@/types";
 import { NoteItem } from "./NoteItem";
 import { FolderItem } from "./FolderItem";
@@ -14,6 +17,20 @@ interface NoteListProps {
 }
 
 function FolderAndNoteGrid({ folders, notes }: { folders: Folder[]; notes: Note[] }) {
+  const updateNote = useUpdateNote();
+  const updateFolder = useUpdateFolder();
+
+  const handleDrop = useCallback(
+    (payload: { type: "note" | "folder"; id: string }, targetFolderId: string) => {
+      if (payload.type === "note") {
+        updateNote.mutate({ id: payload.id, data: { folderId: targetFolderId } });
+      } else {
+        updateFolder.mutate({ id: payload.id, data: { parentId: targetFolderId } });
+      }
+    },
+    [updateNote, updateFolder]
+  );
+
   if (folders.length === 0 && notes.length === 0) return <NoteNux />;
 
   return (
@@ -21,7 +38,7 @@ function FolderAndNoteGrid({ folders, notes }: { folders: Folder[]; notes: Note[
       {folders.length > 0 && (
         <div className="flex flex-wrap gap-4 pb-4">
           {folders.map((f: Folder) => (
-            <FolderItem key={f.id} folder={f} />
+            <FolderItem key={f.id} folder={f} onDrop={handleDrop} />
           ))}
         </div>
       )}

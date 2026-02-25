@@ -18,8 +18,15 @@ export function NoteItem({ note }: NoteItemProps) {
     deleteNoteMutation.mutate(note.id);
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("application/json", JSON.stringify({ type: "note", id: note.id }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       onClick={() => router.push(`/notes/${note.id}`)}
       className="flex text-gray-400 flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group w-28 relative"
     >

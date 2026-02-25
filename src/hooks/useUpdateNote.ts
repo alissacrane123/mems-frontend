@@ -6,11 +6,12 @@ export function useUpdateNote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { title?: string; content?: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { title?: string; content?: string; folderId?: string } }) =>
       api.updateNote(id, data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.note(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.notes });
+      queryClient.invalidateQueries({ queryKey: queryKeys.folders });
     },
   });
 }
