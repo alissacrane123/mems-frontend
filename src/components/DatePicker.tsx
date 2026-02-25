@@ -142,7 +142,7 @@ export default function DatePicker({ value, onChange }: DatePickerProps) {
                   onClick={() => selectDay(day)}
                   className={`h-8 w-8 mx-auto rounded-full text-xs flex items-center justify-center transition-colors cursor-pointer
                     ${selected
-                      ? "bg-blue-600 text-white"
+                      ? "dark:bg-blue-900/20 text-white"
                       : today
                         ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"

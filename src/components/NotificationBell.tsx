@@ -152,7 +152,7 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
                     onAccept(notification.id, notification.data.boardId!);
                   }}
                   disabled={isAccepting}
-                  className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer active:scale-95"
+                  className="flex-1 px-3 py-1.5 text-xs font-medium text-white dark:bg-blue-900/20 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer active:scale-95"
                 >
                   {isAccepting ? 'Accepting...' : 'Accept'}
                 </button>
@@ -217,7 +217,7 @@ function NotificationItem({ notification, onClick, onAccept, onDecline, isAccept
         </div>
         {!notification.isRead && (
           <div className="ml-2 flex-shrink-0">
-            <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+            <div className="h-2 w-2 rounded-full dark:bg-blue-900/20"></div>
           </div>
         )}
       </div>

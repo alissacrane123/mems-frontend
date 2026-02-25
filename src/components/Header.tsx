@@ -45,7 +45,7 @@ export default function Header() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg dark:bg-blue-900/20 text-white font-bold text-lg">
                 FM
               </div>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -196,7 +196,7 @@ export default function Header() {
             ) : (
               <button
                 onClick={() => router.push("/auth")}
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer active:scale-95"
+                className="flex items-center space-x-1.5 px-3 py-1.5 text-sm font-medium text-white dark:bg-blue-900/20 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer active:scale-95"
               >
                 <svg
                   className="h-3.5 w-3.5"

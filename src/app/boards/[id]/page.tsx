@@ -165,7 +165,7 @@ export default function Home() {
         <Spinner className="py-12" />
       ) : entries.length > 0 ? (
         <div className="space-y-6">
-          {entries.map((entry) => {
+          {entries.map((entry, index) => {
             const d = new Date(entry.createdAt);
             const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
             return (
@@ -173,6 +173,7 @@ export default function Home() {
                 <JournalEntry
                   entry={entry}
                   isOwnPost={entry.userId === user.id}
+                  index={index}
                 />
               </div>
             );

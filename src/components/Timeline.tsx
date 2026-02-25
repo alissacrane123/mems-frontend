@@ -118,7 +118,7 @@ export default function Timeline({ entries }: TimelineProps) {
               onClick={() => scrollToMonth(m.year, m.month)}
               className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 isActive
-                  ? "bg-blue-600 text-white"
+                  ? "dark:bg-blue-900/20 text-white"
                   : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >

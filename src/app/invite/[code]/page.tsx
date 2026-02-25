@@ -76,7 +76,7 @@ export default function InvitePage() {
     <div className="max-w-md mx-auto mt-16">
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
         <div className="text-center mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xl mx-auto mb-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg dark:bg-blue-900/20 text-white font-bold text-xl mx-auto mb-4">
             FM
           </div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">

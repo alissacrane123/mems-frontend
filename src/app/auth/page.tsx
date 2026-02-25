@@ -75,7 +75,7 @@ export default function AuthPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg dark:bg-blue-900/20 text-white font-bold text-xl">
               FM
             </div>
           </div>
@@ -231,7 +231,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95 transition-all"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white dark:bg-blue-900/20 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95 transition-all"
             >
               {loading ? 'Please wait...' : (isSignUp ? 'Sign up' : 'Sign in')}
             </button>
