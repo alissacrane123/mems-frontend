@@ -34,24 +34,31 @@ function FolderAndNoteGrid({ folders, notes }: { folders: Folder[]; notes: Note[
   if (folders.length === 0 && notes.length === 0) return <NoteNux />;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {folders.length > 0 && (
-        <div className="flex flex-wrap gap-4 pb-4">
-          {folders.map((f: Folder) => (
-            <FolderItem key={f.id} folder={f} onDrop={handleDrop} />
-          ))}
-        </div>
-      )}
-      {folders.length > 0 && notes.length > 0 && (
-        <div className="mx-4 w-full flex">
-          <div className="w-full h-full border-b border-gray-200 dark:border-gray-700" />
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+            Folders
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {folders.map((f: Folder, i: number) => (
+              <FolderItem key={f.id} folder={f} index={i} onDrop={handleDrop} />
+            ))}
+          </div>
         </div>
       )}
       {notes.length > 0 && (
-        <div className="flex flex-wrap gap-4">
-          {notes.map((note: Note) => (
-            <NoteItem key={note.id} note={note} />
-          ))}
+        <div>
+          {folders.length > 0 && (
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+              Notes
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {notes.map((note: Note, i: number) => (
+              <NoteItem key={note.id} note={note} index={i} />
+            ))}
+          </div>
         </div>
       )}
     </div>

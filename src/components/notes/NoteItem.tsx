@@ -4,17 +4,23 @@ import { useRouter } from "next/navigation";
 import { formatDateShort } from "@/lib/format";
 import { useDeleteNote } from "@/hooks/useDeleteNote";
 import { CloseIcon, NotepadIcon } from "@/components/icons";
+import { shuffleColors } from "@/lib/constants";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 
+const noteColors = shuffleColors(97);
+
 type NoteItemProps = {
   note: Note;
+  index?: number;
 };
 
-export function NoteItem({ note }: NoteItemProps) {
+export function NoteItem({ note, index = 0 }: NoteItemProps) {
   const router = useRouter();
   const deleteNoteMutation = useDeleteNote();
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const accent = noteColors[index % noteColors.length]!;
 
   const openConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -38,22 +44,33 @@ export function NoteItem({ note }: NoteItemProps) {
         draggable
         onDragStart={handleDragStart}
         onClick={() => router.push(`/notes/${note.id}`)}
-        className="flex text-gray-400 flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group w-28 relative"
+        className="relative overflow-hidden flex items-center gap-3 min-w-[160px] px-4 py-3.5 rounded-xl border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-gray-800 cursor-pointer group transition-all duration-200 hover:border-gray-300 dark:hover:border-white/[0.14] hover:-translate-y-px hover:shadow-[0_6px_24px_rgba(10,15,25,0.08)] dark:hover:shadow-[0_6px_24px_rgba(0,0,0,0.3)]"
       >
+        <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${accent.gradient}`} />
+
         <button
           onClick={openConfirm}
-          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-all cursor-pointer"
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 transition-all cursor-pointer"
           title="Delete note"
         >
           <CloseIcon />
         </button>
-        <NotepadIcon />
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center truncate w-full">
-          {note.title}
-        </span>
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">
-          {formatDateShort(note.updatedAt)}
-        </span>
+
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: `${accent.dot}1a` }}
+        >
+          <NotepadIcon className="w-5 h-5" fill={accent.dot} style={{ stroke: accent.dot }} />
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            {note.title}
+          </div>
+          <div className="text-[11px] text-gray-400 dark:text-gray-500">
+            {formatDateShort(note.updatedAt)}
+          </div>
+        </div>
       </div>
 
       <Modal open={showConfirm} onClose={() => setShowConfirm(false)} maxWidth="max-w-sm">

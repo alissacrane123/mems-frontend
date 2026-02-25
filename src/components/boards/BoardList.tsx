@@ -20,8 +20,8 @@ export function BoardList() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {boards.map((board: Board) => (
-        <BoardItem key={board.id} board={board} />
+      {boards.map((board: Board, index: number) => (
+        <BoardItem key={board.id} board={board} index={index} />
       ))}
     </div>
   );

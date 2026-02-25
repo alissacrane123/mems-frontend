@@ -110,17 +110,18 @@ export function CloseIcon({ className = "h-3.5 w-3.5" }: IconProps) {
   );
 }
 
-export function NotepadIcon({ className = "w-11 h-11" }: IconProps) {
+export function NotepadIcon({ className = "w-11 h-11", fill, style }: IconProps & { fill?: string; style?: React.CSSProperties }) {
   return (
     <svg
       className={className}
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      fill="none"
+      fill={fill ?? "none"}
       stroke="currentColor"
       strokeWidth="1"
       strokeLinecap="round"
       strokeLinejoin="round"
+      style={style}
     >
       <path d="M8 2v4m4-4v4m4-4v4" />
       <rect width="16" height="18" x="4" y="4" rx="2" />
@@ -129,20 +130,20 @@ export function NotepadIcon({ className = "w-11 h-11" }: IconProps) {
   );
 }
 
-export function FolderIcon({ className = "w-11 h-11" }: IconProps) {
+export function FolderIcon({ className = "w-11 h-11", fill, style }: IconProps & { fill?: string; style?: React.CSSProperties }) {
   return (
     <svg
       className={className}
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
-      fill="none"
+      fill={fill ?? "none"}
       stroke="currentColor"
       strokeWidth="1"
       strokeLinecap="round"
       strokeLinejoin="round"
+      style={style}
     >
       <path
-        fill="none"
         d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
       />
     </svg>

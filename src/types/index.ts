@@ -6,6 +6,7 @@ export interface Board {
   role: string;
   memberCount: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Entry {
