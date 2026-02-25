@@ -21,18 +21,21 @@ function RootNoteList() {
 
   if (folders.length === 0 && notes.length === 0) return <NoteNux />;
 
-  const sorted = [...notes].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
-
   return (
-    <div className="flex flex-wrap gap-4">
-      {folders.map((folder: Folder) => (
-        <FolderItem key={folder.id} folder={folder} />
-      ))}
-      {sorted.map((note: Note) => (
-        <NoteItem key={note.id} note={note} />
-      ))}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-4 pb-4">
+        {folders.map((f: Folder) => (
+          <FolderItem key={f.id} folder={f} />
+        ))}
+      </div>
+      <div className="mx-4 w-full flex">
+        <div className="w-full h-full border-b border-gray-200 dark:border-gray-700"/>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        {notes.map((note: Note) => (
+          <NoteItem key={note.id} note={note} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -47,18 +50,21 @@ function FolderNoteList({ folderId }: { folderId: string }) {
 
   if (subfolders.length === 0 && notes.length === 0) return <NoteNux />;
 
-  const sorted = [...notes].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
-
   return (
-    <div className="flex flex-wrap gap-4">
-      {subfolders.map((f: Folder) => (
-        <FolderItem key={f.id} folder={f} />
-      ))}
-      {sorted.map((note: Note) => (
-        <NoteItem key={note.id} note={note} />
-      ))}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-4">
+        {subfolders.map((f: Folder) => (
+          <FolderItem key={f.id} folder={f} />
+        ))}
+      </div>
+      <div className="mx-4 w-full">
+        <div className="w-full h-full bg-gray-200 dark:bg-gray-700"/>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        {notes.map((note: Note) => (
+          <NoteItem key={note.id} note={note} />
+        ))}
+      </div>
     </div>
   );
 }
