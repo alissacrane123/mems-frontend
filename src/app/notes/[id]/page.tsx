@@ -83,11 +83,15 @@ export default function NoteEditorPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 mb-2">
         <button
-          onClick={() => router.push("/notes")}
+          onClick={() =>
+            router.push(
+              note.folderId ? `/notes/folder/${note.folderId}` : "/notes",
+            )
+          }
           className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer"
         >
           <ChevronLeftIcon className="h-4 w-4 mr-1" />
-          Notes
+          Back
         </button>
         <span className="text-xs text-gray-400 dark:text-gray-500">
           {saving

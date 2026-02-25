@@ -9,4 +9,6 @@ export const queryKeys = {
     ['memberCheck', boardId, userId] as const,
   notes: ['notes'] as const,
   note: (id: string) => ['notes', id] as const,
+  folders: ['folders'] as const,
+  folder: (id: string) => ['folders', id] as const,
 };

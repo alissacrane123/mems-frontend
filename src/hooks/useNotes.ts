@@ -5,14 +5,14 @@ import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Note } from '@/types';
 
-export function useNotes() {
+export function useNotes(folderId?: string | null) {
   const {
     data: notes = [],
     isPending: loading,
     error: queryError,
   } = useQuery<Note[]>({
-    queryKey: queryKeys.notes,
-    queryFn: api.getNotes,
+    queryKey: [...queryKeys.notes, folderId ?? 'root'],
+    queryFn: () => api.getNotes(folderId ?? undefined),
   });
 
   return {

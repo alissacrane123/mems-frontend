@@ -2,13 +2,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 
-export function useCreateNote() {
+export function useCreateFolder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { title?: string, folderId?: string }) => api.createNote(data),
+    mutationFn: (data: { name: string; parentId?: string }) => api.createFolder(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.notes });
+      queryClient.invalidateQueries({ queryKey: queryKeys.folders });
     },
   });
 }

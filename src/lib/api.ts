@@ -158,17 +158,33 @@ export const checkInvite = (userId: string, boardId: string) =>
   apiFetch(`/api/notifications/check-invite?user_id=${userId}&board_id=${boardId}`);
 
 // Notes
-export const getNotes = () =>
-  apiFetch("/api/notes");
+export const getNotes = (folderId?: string) =>
+  apiFetch(`/api/notes${folderId ? `?folder_id=${folderId}` : ""}`);
 
 export const getNote = (id: string) =>
   apiFetch(`/api/notes/${id}`);
 
-export const createNote = (data: { title?: string }) =>
+export const createNote = (data: { title?: string; folderId?: string }) =>
   apiFetch("/api/notes", { method: "POST", body: JSON.stringify(data) });
 
-export const updateNote = (id: string, data: { title?: string; content?: string }) =>
+export const updateNote = (id: string, data: { title?: string; content?: string; folderId?: string }) =>
   apiFetch(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 
 export const deleteNote = (id: string) =>
   apiFetch(`/api/notes/${id}`, { method: "DELETE" });
+
+// Folders
+export const getFolders = (parentId?: string) =>
+  apiFetch(`/api/folders${parentId ? `?parent_id=${parentId}` : ""}`);
+
+export const getFolder = (id: string) =>
+  apiFetch(`/api/folders/${id}`);
+
+export const createFolder = (data: { name: string; parentId?: string }) =>
+  apiFetch("/api/folders", { method: "POST", body: JSON.stringify(data) });
+
+export const updateFolder = (id: string, data: { name?: string; parentId?: string }) =>
+  apiFetch(`/api/folders/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+export const deleteFolder = (id: string, mode: "delete" | "move-up" = "delete") =>
+  apiFetch(`/api/folders/${id}?mode=${mode}`, { method: "DELETE" });

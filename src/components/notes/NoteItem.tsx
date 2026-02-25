@@ -1,8 +1,7 @@
 import type { Note } from '@/types';
 import { useRouter } from 'next/navigation';
-import { formatDate } from '@/lib/format';
+import { formatDateShort } from '@/lib/format';
 import { useDeleteNote } from '@/hooks/useDeleteNote';
-import { TrashIcon } from '@/components/icons';
 
 type NoteItemProps = {
   note: Note;
@@ -21,23 +20,31 @@ export function NoteItem({ note }: NoteItemProps) {
   return (
     <div
       onClick={() => router.push(`/notes/${note.id}`)}
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow cursor-pointer group"
+      className="border border-gray-200 dark:border-gray-700 flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group w-28 relative"
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate flex-1">
-          {note.title}
-        </h3>
-        <button
-          onClick={handleDelete}
-          className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 hover:text-red-500 transition-all cursor-pointer"
-          title="Delete note"
-        >
-          <TrashIcon />
-        </button>
-      </div>
-      <p className="text-xs text-gray-400 dark:text-gray-500">
-        {formatDate(note.updatedAt)}
-      </p>
+      <button
+        onClick={handleDelete}
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all cursor-pointer"
+        title="Delete note"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <svg
+        className="h-12 w-12 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center truncate w-full">
+        {note.title}
+      </span>
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+        {formatDateShort(note.updatedAt)}
+      </span>
     </div>
   );
 }

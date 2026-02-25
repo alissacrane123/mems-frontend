@@ -24,7 +24,7 @@
 
 ---
 
-## Database Schema (8 tables)
+## Database Schema (9 tables)
 
 ### 1. `users`
 
@@ -118,12 +118,26 @@
 | ------------ | ------------- | --------------------------------------------------- |
 | `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()              |
 | `user_id`    | `UUID`        | FK → `users(id)` ON DELETE CASCADE, NOT NULL        |
+| `folder_id`  | `UUID`        | FK → `folders(id)` ON DELETE SET NULL, nullable     |
 | `title`      | `TEXT`        | NOT NULL, DEFAULT 'Untitled Note'                   |
 | `content`    | `TEXT`        | nullable                                            |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
 
 > Index on `user_id`. Has `BEFORE UPDATE` trigger to auto-set `updated_at = now()`.
+
+### 9. `folders`
+
+| Field        | Type          | Constraints                                         |
+| ------------ | ------------- | --------------------------------------------------- |
+| `id`         | `UUID`        | PRIMARY KEY, DEFAULT gen_random_uuid()              |
+| `user_id`    | `UUID`        | FK → `users(id)` ON DELETE CASCADE, NOT NULL        |
+| `parent_id`  | `UUID`        | FK → `folders(id)` ON DELETE CASCADE, nullable      |
+| `name`       | `TEXT`        | NOT NULL                                            |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT NOW()                             |
+
+> `parent_id = NULL` means root-level folder. Supports unlimited nesting. Has `BEFORE UPDATE` trigger to auto-set `updated_at = now()`.
 
 ---
 
@@ -580,7 +594,7 @@ Check if a pending (unread) board invitation already exists for a user. **Protec
 
 #### `GET /api/notes`
 
-Get all notes for the current user (newest updated first). **Protected.**
+Get all notes for the current user, ordered by `updated_at DESC`. Includes `folder_id` if note is in a folder. **Protected.**
 
 - **Response:**
   ```json
@@ -588,6 +602,7 @@ Get all notes for the current user (newest updated first). **Protected.**
     {
       "id": "uuid",
       "user_id": "uuid",
+      "folder_id": "uuid | null",
       "title": "string",
       "content": "string | null",
       "created_at": "timestamp",
@@ -602,11 +617,15 @@ Create a new note for the current user. **Protected.**
 
 - **Request body:**
   ```json
-  { "title": "string (optional, defaults to 'Untitled Note')" }
+  {
+    "title": "string (optional, defaults to 'Untitled Note')",
+    "content": "string (optional)",
+    "folder_id": "uuid (optional)"
+  }
   ```
 - **Response:**
   ```json
-  { "id": "uuid", "user_id": "uuid", "title": "string", "content": null, "created_at": "timestamp", "updated_at": "timestamp" }
+  { "id": "uuid", "user_id": "uuid", "folder_id": "uuid | null", "title": "string", "content": null, "created_at": "timestamp", "updated_at": "timestamp" }
   ```
 
 #### `GET /api/notes/{id}`
@@ -616,21 +635,25 @@ Get a single note by ID. Returns 404 if not found or not owned by user. **Protec
 - **Path params:** `id` (UUID)
 - **Response:**
   ```json
-  { "id": "uuid", "user_id": "uuid", "title": "string", "content": "string | null", "created_at": "timestamp", "updated_at": "timestamp" }
+  { "id": "uuid", "user_id": "uuid", "folder_id": "uuid | null", "title": "string", "content": "string | null", "created_at": "timestamp", "updated_at": "timestamp" }
   ```
 
 #### `PATCH /api/notes/{id}`
 
-Update a note's title and/or content. The `updated_at` trigger fires automatically. **Protected.**
+Update a note. Uses COALESCE so only provided fields are updated. The `updated_at` trigger fires automatically. **Protected.**
 
 - **Path params:** `id` (UUID)
 - **Request body:**
   ```json
-  { "title": "string (optional)", "content": "string (optional)" }
+  {
+    "title": "string (optional)",
+    "content": "string (optional)",
+    "folder_id": "uuid (optional — move note to different folder)"
+  }
   ```
 - **Response:**
   ```json
-  { "id": "uuid", "user_id": "uuid", "title": "string", "content": "string", "created_at": "timestamp", "updated_at": "timestamp" }
+  { "id": "uuid", "user_id": "uuid", "folder_id": "uuid | null", "title": "string", "content": "string", "created_at": "timestamp", "updated_at": "timestamp" }
   ```
 
 #### `DELETE /api/notes/{id}`
@@ -638,6 +661,100 @@ Update a note's title and/or content. The `updated_at` trigger fires automatical
 Delete a note. Returns 404 if not found or not owned by user. **Protected.**
 
 - **Path params:** `id` (UUID)
+- **Response:**
+  ```json
+  { "success": true }
+  ```
+
+---
+
+### Folders (5 endpoints)
+
+Folders support unlimited nesting via `parent_id`. A `null` `parent_id` means the folder is at root level.
+
+#### Deletion Modes
+
+| Mode | Behavior |
+| ---- | -------- |
+| `mode=delete` (default) | Deletes folder + all subfolders + all notes recursively via CASCADE |
+| `mode=move-up` | Moves all notes and subfolders to parent (or root if top-level), then deletes the empty folder. Uses recursive CTE to find all descendants. |
+
+#### `GET /api/folders`
+
+Get all folders for the current user as a flat list ordered by `name ASC`. Each folder includes `parent_id` so the frontend can build the tree structure. **Protected.**
+
+- **Response:**
+  ```json
+  [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "parent_id": "uuid | null",
+      "name": "string",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ]
+  ```
+
+#### `POST /api/folders`
+
+Create a new folder. **Protected.**
+
+- **Request body:**
+  ```json
+  {
+    "name": "string (required)",
+    "parent_id": "uuid (optional — omit or null for root folder)"
+  }
+  ```
+- **Response:**
+  ```json
+  { "id": "uuid", "user_id": "uuid", "parent_id": "uuid | null", "name": "string", "created_at": "timestamp", "updated_at": "timestamp" }
+  ```
+
+#### `GET /api/folders/{id}`
+
+Get a folder with its direct subfolders and direct notes. Returns 404 if not found or not owned by user. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Response:**
+  ```json
+  {
+    "id": "uuid",
+    "user_id": "uuid",
+    "parent_id": "uuid | null",
+    "name": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "subfolders": [...],
+    "notes": [...]
+  }
+  ```
+
+#### `PATCH /api/folders/{id}`
+
+Rename a folder or move it to a different parent. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Request body:**
+  ```json
+  {
+    "name": "string (optional)",
+    "parent_id": "uuid (optional — move to different parent)"
+  }
+  ```
+- **Response:**
+  ```json
+  { "id": "uuid", "user_id": "uuid", "parent_id": "uuid | null", "name": "string", "created_at": "timestamp", "updated_at": "timestamp" }
+  ```
+
+#### `DELETE /api/folders/{id}?mode=delete|move-up`
+
+Delete a folder. See deletion modes above. **Protected.**
+
+- **Path params:** `id` (UUID)
+- **Query params:** `mode` (`delete` or `move-up`, defaults to `delete`)
 - **Response:**
   ```json
   { "success": true }
@@ -665,6 +782,7 @@ All other endpoints require a valid JWT in the `token` HttpOnly cookie.
 | Profiles       | Readable by all authenticated users; writable only by the owner      |
 | Board Members  | Viewable by fellow board members; self-join via invite               |
 | Notes          | Users can only CRUD their own notes                                  |
+| Folders        | Users can only CRUD their own folders                                |
 
 ---
 
@@ -675,10 +793,12 @@ All other endpoints require a valid JWT in the `token` HttpOnly cookie.
 3. **On invite accept:** Check existing membership, then insert `board_members` with `role: 'member'`, and mark the notification as read.
 4. **Photo upload:** Save file to local filesystem at `{user_id}/{entry_id}/{timestamp}{ext}`, insert `photos` record, return public URL.
 5. **Note update:** The `update_updated_at` trigger automatically sets `updated_at = now()` on every `UPDATE` to `notes`.
+6. **Folder deletion (`mode=delete`):** CASCADE on `folders.parent_id` recursively deletes all subfolders; CASCADE on `notes.folder_id` sets it to NULL (notes are orphaned to root, not deleted).
+7. **Folder deletion (`mode=move-up`):** Uses a recursive CTE to find all descendant notes and subfolders, moves them to the deleted folder's parent (or root), then deletes the folder.
 
 ---
 
-## Endpoint Summary (32 total)
+## Endpoint Summary (37 total)
 
 ```
 GET    /api/health                            (public)
@@ -721,4 +841,10 @@ POST   /api/notes                              (protected)
 GET    /api/notes/{id}                         (protected)
 PATCH  /api/notes/{id}                         (protected)
 DELETE /api/notes/{id}                         (protected)
+
+GET    /api/folders                            (protected)
+POST   /api/folders                            (protected)
+GET    /api/folders/{id}                       (protected)
+PATCH  /api/folders/{id}                       (protected)
+DELETE /api/folders/{id}                       (protected)
 ```
