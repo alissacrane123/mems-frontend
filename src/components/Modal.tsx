@@ -24,11 +24,11 @@ export default function Modal({ open, onClose, children, maxWidth = "max-w-md" }
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg p-6 w-full ${maxWidth} shadow-xl relative`}
+        className={`bg-white dark:bg-gray-900/95 rounded-lg p-6 w-full ${maxWidth} shadow-xl relative`}
         onClick={(e) => e.stopPropagation()}
       >
         <button

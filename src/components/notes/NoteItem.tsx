@@ -64,11 +64,11 @@ export function NoteItem({ note }: NoteItemProps) {
           Are you sure you want to delete <span className="font-medium">&ldquo;{note.title}&rdquo;</span>? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={() => setShowConfirm(false)}>
-            Cancel
-          </Button>
-          <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleteNoteMutation.isPending}>
+          <Button variant="primary" onClick={handleDelete} disabled={deleteNoteMutation.isPending}>
             {deleteNoteMutation.isPending ? "Deleting..." : "Delete"}
+          </Button>
+          <Button variant="secondary" onClick={() => setShowConfirm(false)}>
+            Cancel
           </Button>
         </div>
       </Modal>

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { Lobster } from "next/font/google";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
+import { SparkleIcon } from "./icons";
+
+const lobster = Lobster({ weight: "400", subsets: ["latin"] });
 
 export default function Header() {
   const { theme, toggleTheme, mounted } = useTheme();
@@ -45,9 +49,10 @@ export default function Header() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Mems
+              <h1 className={`text-xl text-gray-900 dark:text-gray-100 ${lobster.className}`}>
+                mems
               </h1>
+              <SparkleIcon className="h-4 w-4" />
             </div>
             <div className="h-9 w-9"></div>
           </div>
@@ -65,9 +70,10 @@ export default function Header() {
               className="flex items-center space-x-2 cursor-pointer"
               onClick={() => router.push("/")}
             >
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Mems
+              <h1 className={`text-xl text-gray-900 dark:text-gray-100 ${lobster.className}`}>
+                mems
               </h1>
+              <SparkleIcon className="h-4 w-4 text-gray-900 dark:text-gray-100" />
             </div>
             {user && (
               <nav className="flex items-center space-x-4">
