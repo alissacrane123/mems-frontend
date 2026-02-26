@@ -103,7 +103,7 @@ export default function Timeline({ entries }: TimelineProps) {
   if (months.length <= 1) return null;
 
   return (
-    <div className="sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+    <div className="sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pb-4">
       <div
         ref={scrollRef}
         className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide"

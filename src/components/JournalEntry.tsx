@@ -1,4 +1,4 @@
-import { formatDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import type { Entry } from "@/types";
 import { ACCENT_COLORS } from "@/lib/constants";
 
@@ -6,149 +6,106 @@ interface JournalEntryProps {
   entry: Entry;
   isOwnPost: boolean;
   index?: number;
+  side?: "left" | "right";
 }
 
-export default function JournalEntry({ entry, isOwnPost, index = 0 }: JournalEntryProps) {
+export default function JournalEntry({ entry, isOwnPost, index = 0, side = "left" }: JournalEntryProps) {
   const { content, createdAt, location, photos = [], createdByName } = entry;
-  const date = formatDate(createdAt);
   const time = formatTime(createdAt);
   const accent = ACCENT_COLORS[index % ACCENT_COLORS.length]!;
+  const initial = (createdByName || "?").charAt(0).toUpperCase();
+  const hasPhotos = photos.length > 0;
+
+  const d = new Date(createdAt);
+  const dayNum = d.getDate();
+  const monthShort = d.toLocaleDateString("en-US", { month: "short" });
+  const year = d.getFullYear();
 
   return (
-    <div className={`flex ${isOwnPost ? "justify-end" : "justify-start"} mb-6`}>
-      <div
-        className={`max-w-[85%] sm:max-w-[75%] ${isOwnPost ? "items-end" : "items-start"} flex flex-col`}
-      >
-        <div className={`mb-1 px-1 ${isOwnPost ? "text-right" : "text-left"}`}>
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {isOwnPost ? "You" : createdByName}
-          </span>
-        </div>
-
+    <div className={`flex items-start gap-0 relative ${side === "right" ? "flex-row-reverse" : "flex-row"}`}>
+      {/* Card */}
+      <div className="flex-1 min-w-0">
         <article
-          className={`rounded-2xl shadow-sm overflow-hidden transition-colors duration-200 ${
-            isOwnPost
-              ? "dark:bg-blue-900/20 text-white"
-              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          className={`rounded-2xl overflow-hidden border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-gray-800 transition-all duration-250 cursor-pointer group hover:border-gray-300 dark:hover:border-white/[0.13] hover:-translate-y-0.5 hover:shadow-[0_16px_48px_rgba(10,15,25,0.1)] dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.5)] ${
+            !hasPhotos ? "dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-800/80" : ""
           }`}
         >
-          <div className={`h-1.5 bg-gradient-to-r ${accent.gradient}`} />
-          <div className="p-4">
-          <div
-            className={`leading-relaxed whitespace-pre-wrap mb-2 ${
-              isOwnPost ? "text-white" : "text-gray-900 dark:text-gray-100"
-            }`}
-          >
-            {content}
-          </div>
-
-          {photos.length > 0 && (
-            <div className="mt-3">
+          <div className={`h-[2px] bg-gradient-to-r ${accent.gradient}`} />
+          <div className="p-5">
+            {/* Author row */}
+            <div className="flex items-center gap-2 mb-3">
               <div
-                className={`grid gap-2 ${
-                  photos.length === 1
-                    ? "grid-cols-1 max-w-sm"
-                    : photos.length === 2
-                      ? "grid-cols-2"
-                      : "grid-cols-2 sm:grid-cols-3"
-                }`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 bg-gradient-to-br ${accent.gradient}`}
               >
-                {photos.map((photo, index) => (
-                  <div
-                    key={index}
-                    className="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700 aspect-square group cursor-pointer"
-                  >
-                    <img
-                      src={photo}
-                      alt={`Memory photo ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                    />
-                  </div>
-                ))}
+                {initial}
               </div>
+              <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                {isOwnPost ? "You" : createdByName}
+              </span>
+              <span className="w-[3px] h-[3px] rounded-full bg-gray-300 dark:bg-gray-600" />
+              <span className="text-xs text-gray-400 dark:text-gray-500">{time}</span>
+              {location && (
+                <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto truncate max-w-[150px]">
+                  📍 {location}
+                </span>
+              )}
             </div>
-          )}
 
-          <div
-            className={`flex flex-wrap items-center gap-3 mt-3 pt-2 border-t ${
-              isOwnPost
-                ? "border-blue-500"
-                : "border-gray-200 dark:border-gray-700"
-            }`}
-          >
-            <div
-              className={`flex items-center space-x-1 text-xs ${
-                isOwnPost ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
-              }`}
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span className="font-medium">{date}</span>
-            </div>
-            <div
-              className={`flex items-center space-x-1 text-xs ${
-                isOwnPost ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
-              }`}
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{time}</span>
-            </div>
-            {location && (
+            {/* Photos */}
+            {hasPhotos && (
+              <div className="mb-3">
+                <div
+                  className={`grid gap-1.5 rounded-xl overflow-hidden ${
+                    photos.length === 1
+                      ? "grid-cols-1"
+                      : "grid-cols-2"
+                  }`}
+                >
+                  {photos.map((photo, i) => (
+                    <div
+                      key={i}
+                      className="relative overflow-hidden bg-gray-100 dark:bg-gray-700 aspect-[4/3]"
+                    >
+                      <img
+                        src={photo}
+                        alt={`Memory photo ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Content */}
+            {content && (
               <div
-                className={`flex items-center space-x-1 text-xs ${
-                  isOwnPost
-                    ? "text-blue-100"
-                    : "text-gray-500 dark:text-gray-400"
+                className={`leading-relaxed whitespace-pre-wrap text-gray-900 dark:text-gray-100 ${
+                  !hasPhotos
+                    ? "text-[17px] dark:text-gray-200 leading-[1.7]"
+                    : "text-sm"
                 }`}
               >
-                <svg
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span className="truncate max-w-[150px]">{location}</span>
+                {content}
               </div>
             )}
           </div>
-          </div>
         </article>
+      </div>
+
+      {/* Timeline dot */}
+      <div className="w-20 flex-shrink-0 flex justify-center items-start pt-5 relative z-10">
+        <div
+          className="w-2.5 h-2.5 rounded-full border-2 transition-transform duration-200 group-hover:scale-150"
+          style={{ borderColor: accent.dot, background: "var(--tw-bg-opacity, #f9fafb)" }}
+        />
+      </div>
+
+      {/* Date side */}
+      <div className={`flex-1 min-w-0 pt-5 hidden md:block ${side === "left" ? "text-left" : "text-right"}`}>
+        <div className="text-xs italic  text-gray-400 dark:text-gray-500 leading-snug">
+          {monthShort} {dayNum}<br />{year}
+        </div>
       </div>
     </div>
   );
