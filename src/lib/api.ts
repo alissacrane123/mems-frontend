@@ -100,6 +100,9 @@ export const getBoard = (id: string) =>
 export const deleteBoard = (id: string) =>
   apiFetch(`/api/boards/${id}`, { method: "DELETE" });
 
+export const exportBoardPhotos = (id: string) =>
+  `${API_URL}/api/boards/${id}/export-photos`;
+
 export const getBoardByInviteCode = (code: string) =>
   apiFetch(`/api/boards/invite/${code}`);
 

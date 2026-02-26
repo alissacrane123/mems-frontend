@@ -168,6 +168,28 @@ export function SparkleIcon({ className = "w-4 h-4" }: IconProps) {
   );
 }
 
+export function FrownIcon({ className = "h-12 w-12" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 15s1.5-2 4-2 4 2 4 2" />
+      <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth={2.5} />
+      <line x1="15" y1="9" x2="15.01" y2="9" strokeWidth={2.5} />
+    </svg>
+  );
+}
+
+export function CameraExportIcon({ className = "w-4.5 h-4.5" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="14" rx="2" />
+      <circle cx="12" cy="13" r="4" />
+      <circle cx="12" cy="13" r="1.5" />
+      <path d="M6 6V5a1 1 0 011-1h3l1 2" />
+    </svg>
+  );
+}
+
 export function PencilIcon({
   className = "mx-auto h-12 w-12 text-gray-400",
 }: IconProps) {
