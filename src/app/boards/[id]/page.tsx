@@ -14,10 +14,37 @@ import Spinner from "@/components/Spinner";
 import Button from "@/components/Button";
 import Timeline from "@/components/Timeline";
 import { useGetBoard } from "@/hooks/useGetBoard";
+import { useDeleteEntry } from "@/hooks/useDeleteEntry";
 import { ChevronLeftIcon } from "@/components/icons";
 
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const FULL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+const FULL_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 import type { Entry } from "@/types";
 
@@ -48,9 +75,13 @@ export default function Home() {
     reload: reloadEntries,
   } = useEntries(id);
 
+  const deleteEntryMutation = useDeleteEntry(id);
+
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  const isOwner = board?.role === "owner";
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,7 +110,10 @@ export default function Home() {
   }, [entries]);
 
   const boardCreatedDate = board?.createdAt
-    ? (() => { const d = new Date(board.createdAt); return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`; })()
+    ? (() => {
+        const d = new Date(board.createdAt);
+        return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+      })()
     : null;
 
   if (authLoading || boardsLoading) return <Spinner />;
@@ -131,9 +165,14 @@ export default function Home() {
               {board?.name}
             </h1>
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-              <span>{board?.memberCount} {board?.memberCount === 1 ? "member" : "members"}</span>
+              <span>
+                {board?.memberCount}{" "}
+                {board?.memberCount === 1 ? "member" : "members"}
+              </span>
               <span className="text-gray-300 dark:text-gray-600">·</span>
-              <span>{entries.length} {entries.length === 1 ? "memory" : "memories"}</span>
+              <span>
+                {entries.length} {entries.length === 1 ? "memory" : "memories"}
+              </span>
               {boardCreatedDate && (
                 <>
                   <span className="text-gray-300 dark:text-gray-600">·</span>
@@ -143,10 +182,18 @@ export default function Home() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setShowInviteModal(true)} disabled={!board?.id} variant="ghost" >
+            <Button
+              onClick={() => setShowInviteModal(true)}
+              disabled={!board?.id}
+              variant="ghost"
+            >
               Invite
             </Button>
-            <Button onClick={() => setShowAddMemory(true)} disabled={!board?.id} variant="primary" >
+            <Button
+              onClick={() => setShowAddMemory(true)}
+              disabled={!board?.id}
+              variant="primary"
+            >
               + Add Memory
             </Button>
           </div>
@@ -157,9 +204,7 @@ export default function Home() {
       {/* <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent mb-6" /> */}
 
       {/* Timeline month nav */}
-      {!entriesLoading && entries.length > 0 && (
-        <Timeline entries={entries} />
-      )}
+      {!entriesLoading && entries.length > 0 && <Timeline entries={entries} />}
 
       {/* Entries Timeline */}
       {entriesLoading ? (
@@ -172,7 +217,10 @@ export default function Home() {
           {monthGroups.map((group) => (
             <div key={group.key}>
               {/* Month marker */}
-              <div className="text-center relative z-10 mb-9" data-entry-month={group.key}>
+              <div
+                className="text-center relative z-10 mb-9"
+                data-entry-month={group.key}
+              >
                 <div className="inline-flex items-center gap-2.5 bg-gray-50 dark:bg-gray-900 px-5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 dark:bg-blue-500 opacity-50" />
                   <span className="text-sm text-blue-500 dark:text-blue-400">
@@ -184,12 +232,19 @@ export default function Home() {
 
               {/* Entries */}
               {group.entries.map(({ entry, globalIndex }) => (
-                <div key={entry.id} className="mb-10" data-entry-month={group.key}>
+                <div
+                  key={entry.id}
+                  className="mb-10"
+                  data-entry-month={group.key}
+                >
                   <JournalEntry
                     entry={entry}
                     isOwnPost={entry.userId === user.id}
                     index={globalIndex}
                     side={entry.userId === user.id ? "right" : "left"}
+                    canDelete={isOwner || entry.userId === user.id}
+                    onDelete={(entryId) => deleteEntryMutation.mutate(entryId)}
+                    isDeleting={deleteEntryMutation.isPending}
                   />
                 </div>
               ))}
@@ -198,22 +253,33 @@ export default function Home() {
 
           {/* Add memory CTA */}
           <div className="text-center pt-6 relative z-10">
-            <Button
+            <button
               onClick={() => setShowAddMemory(true)}
-              variant="ghost"
-              // className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 text-sm font-medium cursor-pointer transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 text-sm font-medium cursor-pointer transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
             >
-              <span className="w-7 h-7 rounded-full border border-dashed border-current flex items-center justify-center text-base transition-transform duration-200 hover:rotate-90">+</span>
+              <span className="w-7 h-7 rounded-full border border-dashed border-current flex items-center justify-center text-base transition-transform duration-200 hover:rotate-90">
+                +
+              </span>
               Add a memory
-            </Button>
+            </button>
           </div>
         </div>
       ) : (
         board?.id && (
           <EmptyState
             icon={
-              <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             }
             title="No memories yet"

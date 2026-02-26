@@ -120,6 +120,9 @@ export const getEntries = (boardId: string) =>
 export const createEntry = (boardId: string, data: { content: string; location?: string; createdAt?: string }) =>
   apiFetch(`/api/boards/${boardId}/entries`, { method: "POST", body: JSON.stringify(data) });
 
+export const deleteEntry = (entryId: string) =>
+  apiFetch(`/api/entries/${entryId}`, { method: "DELETE" });
+
 // Photos
 export const uploadPhoto = (entryId: string, file: File, displayOrder: number) => {
   const form = new FormData();
