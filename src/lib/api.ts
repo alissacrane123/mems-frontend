@@ -97,6 +97,9 @@ export const createBoard = (data: { name: string; description?: string }) =>
 export const getBoard = (id: string) =>
   apiFetch(`/api/boards/${id}`);
 
+export const deleteBoard = (id: string) =>
+  apiFetch(`/api/boards/${id}`, { method: "DELETE" });
+
 export const getBoardByInviteCode = (code: string) =>
   apiFetch(`/api/boards/invite/${code}`);
 

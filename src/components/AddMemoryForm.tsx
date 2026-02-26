@@ -87,12 +87,12 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !user) return;
+    if (!content || !user) return;
     setError('');
     createEntryMutation.mutate(
       {
         boardId,
-        content: content.trim(),
+        content: content,
         location: location.trim() || undefined,
         createdAt: date.toISOString(),
         files: selectedFiles,
@@ -271,7 +271,7 @@ export default function AddMemoryForm({ boardId, onSuccess, onCancel }: AddMemor
             </Button>
             <Button
               type="submit"
-              disabled={createEntryMutation.isPending || !content.trim()}
+              disabled={createEntryMutation.isPending}
               variant="primary"
               className="flex-1"
             >
