@@ -1,5 +1,6 @@
-import { formatDate, formatTime, parseDateParts } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import type { Entry } from "@/types";
+import { ACCENT_COLORS } from "@/lib/constants";
 
 interface JournalEntryProps {
   entry: Entry;
@@ -7,13 +8,11 @@ interface JournalEntryProps {
   index?: number;
 }
 
-const colors = ["#d90c9b", "#23d90c", "#640cd9"];
-
 export default function JournalEntry({ entry, isOwnPost, index = 0 }: JournalEntryProps) {
   const { content, createdAt, location, photos = [], createdByName } = entry;
   const date = formatDate(createdAt);
   const time = formatTime(createdAt);
-  const borderColor = colors[index % colors.length];
+  const accent = ACCENT_COLORS[index % ACCENT_COLORS.length]!;
 
   return (
     <div className={`flex ${isOwnPost ? "justify-end" : "justify-start"} mb-6`}>
@@ -27,13 +26,14 @@ export default function JournalEntry({ entry, isOwnPost, index = 0 }: JournalEnt
         </div>
 
         <article
-          style={{ borderLeftColor: borderColor, borderRightColor: borderColor }}
-          className={`rounded-2xl shadow-sm p-4 transition-colors duration-200 border-l-2 border-r-2 ${
+          className={`rounded-2xl shadow-sm overflow-hidden transition-colors duration-200 ${
             isOwnPost
               ? "dark:bg-blue-900/20 text-white"
-              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 "
+              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
           }`}
         >
+          <div className={`h-1.5 bg-gradient-to-r ${accent.gradient}`} />
+          <div className="p-4">
           <div
             className={`leading-relaxed whitespace-pre-wrap mb-2 ${
               isOwnPost ? "text-white" : "text-gray-900 dark:text-gray-100"
@@ -146,6 +146,7 @@ export default function JournalEntry({ entry, isOwnPost, index = 0 }: JournalEnt
                 <span className="truncate max-w-[150px]">{location}</span>
               </div>
             )}
+          </div>
           </div>
         </article>
       </div>
