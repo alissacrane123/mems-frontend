@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBoards } from "@/hooks/useBoards";
@@ -41,9 +41,7 @@ export default function Home() {
   const { board, loading, error: boardError } = useGetBoard(id);
 
   const {
-    boards,
     createBoard,
-    loading: boardsLoading,
     error: boardsError,
   } = useBoards();
 
@@ -66,23 +64,21 @@ export default function Home() {
     }
   }, [user, authLoading, router]);
 
-  const boardCreatedDate = board?.createdAt
-    ? (() => {
-        const d = new Date(board.createdAt);
-        return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-      })()
-    : null;
+  const boardCreatedDate = useMemo(() => {
+    if (!board?.createdAt) return null;
+    const d = new Date(board.createdAt);
+    return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }, [board?.createdAt]);
 
-  if (authLoading || boardsLoading) return <Spinner />;
   if (!user) return null;
-
-  const error = boardError || entriesError || boardsError;
-
-  if (loading) return <Spinner />;
+  
+  if (authLoading || loading) return <Spinner />;
 
   if (!board && !loading) {
     return <BoardNotFound />;
   }
+
+  const error = boardError || entriesError || boardsError;
 
   return (
     <div>
@@ -92,7 +88,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Board Hero */}
+      {/* Board header */}
       <BoardDetailHeader
         boardId={id}
         boardName={board?.name ?? ""}
