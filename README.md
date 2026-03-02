@@ -4,6 +4,7 @@ A family memory journal app for capturing, preserving, and sharing memories with
 
 ## Tech Stack
 
+
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **UI:** React 19, Tailwind CSS v4
